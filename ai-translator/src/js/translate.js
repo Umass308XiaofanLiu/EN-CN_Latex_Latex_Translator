@@ -518,7 +518,62 @@ function toggleEditMode() {
     }
 }
 
-// ============= 重新生成翻译 =============
+// ============= 重新生成所有翻译 =============
+async function handleRegenerateAll() {
+    // 如果没有翻译对，直接返回
+    if (AppState.translationPairs.length === 0) return;
+
+    // 如果正在重新生成，则取消
+    if (AppState.isRegeneratingAll) {
+        if (AppState.regenerateAllAbortController) {
+            AppState.regenerateAllAbortController.abort();
+            AppState.regenerateAllAbortController = null;
+        }
+        setState({ isRegeneratingAll: false });
+        return;
+    }
+
+    // 初始化 AbortController
+    const controller = new AbortController();
+    AppState.regenerateAllAbortController = controller;
+
+    setState({ isRegeneratingAll: true, error: null });
+
+    try {
+        const config = getApiConfig();
+        // 获取所有源文本
+        const fullSourceText = AppState.translationPairs.map(p => p.src).join('\n');
+
+        // 重新翻译所有内容
+        const result = await translateBulk(fullSourceText, AppState.sourceLang, AppState.targetLang, config, controller.signal);
+
+        if (result?.translations) {
+            const pairs = result.translations.map((t, idx) => {
+                const oldPair = AppState.translationPairs[idx] || { history: [], historyIndex: -1 };
+                const newHistory = [...(oldPair.history || []), { src: t.src, tgt: t.tgt }];
+                return {
+                    src: t.src,
+                    tgt: t.tgt,
+                    history: newHistory,
+                    historyIndex: newHistory.length - 1,
+                    isUpdating: false,
+                    isRegenerating: false
+                };
+            });
+            setState({ translationPairs: pairs, isEditingMode: false, activeIndex: null });
+        }
+    } catch (err) {
+        if (err.name !== 'AbortError') {
+            setState({ error: err.message || "重新生成翻译失败，请重试。" });
+            console.error(err);
+        }
+    } finally {
+        AppState.regenerateAllAbortController = null;
+        setState({ isRegeneratingAll: false });
+    }
+}
+
+// ============= 重新生成单条翻译 =============
 async function handleRegenerateTranslation(index) {
     const pair = AppState.translationPairs[index];
     if (!pair) return;

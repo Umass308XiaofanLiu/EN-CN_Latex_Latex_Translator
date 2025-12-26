@@ -73,6 +73,10 @@ const AppState = {
     mainAbortController: null,
     rowAbortControllers: new Map(),
     regenerateAbortControllers: new Map(),
+    regenerateAllAbortController: null,
+
+    // 重新生成状态
+    isRegeneratingAll: false,
 
     // Timers
     debounceTimer: null,

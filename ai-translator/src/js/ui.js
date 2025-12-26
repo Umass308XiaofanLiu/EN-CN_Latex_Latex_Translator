@@ -186,7 +186,10 @@ function renderHeader() {
                     <span class="text-indigo-500 group-hover:animate-pulse">${Icons.Sparkles}</span> Insight
                 </button>
                 <button onclick="handleTranslate()" ${!AppState.inputText && !AppState.isLoading ? 'disabled' : ''} class="px-10 py-2.5 rounded-2xl font-black text-sm tracking-wider transition-all shadow-xl active:scale-95 flex items-center gap-2 ${!AppState.inputText && !AppState.isLoading ? 'bg-slate-200 text-slate-400 cursor-not-allowed' : AppState.isLoading ? 'bg-rose-500 text-white hover:bg-rose-600 shadow-rose-200' : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-indigo-200'}">
-                    ${AppState.isLoading ? `<span class="animate-pulse">${Icons.StopCircle}</span> STOP` : AppState.isLoading ? Icons.Loader2 : 'TRANSLATE'}
+                    ${AppState.isLoading ? `<span class="animate-pulse">${Icons.StopCircle}</span> STOP` : 'TRANSLATE'}
+                </button>
+                <button onclick="handleRegenerateAll()" ${AppState.translationPairs.length === 0 || AppState.isRegeneratingAll ? '' : ''} class="px-5 py-2.5 rounded-2xl font-black text-sm tracking-wider transition-all shadow-xl active:scale-95 flex items-center gap-2 ${AppState.translationPairs.length === 0 ? 'bg-slate-200 text-slate-400 cursor-not-allowed' : AppState.isRegeneratingAll ? 'bg-rose-500 text-white hover:bg-rose-600 shadow-rose-200' : 'bg-amber-500 text-white hover:bg-amber-600 shadow-amber-200'}" ${AppState.translationPairs.length === 0 ? 'disabled' : ''} title="重新生成所有翻译">
+                    ${AppState.isRegeneratingAll ? `<span class="animate-spin">${Icons.RefreshCw}</span> STOP` : `${Icons.RefreshCw} REGEN`}
                 </button>
             </div>
         </header>
