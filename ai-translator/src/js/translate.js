@@ -1,0 +1,519 @@
+// ========================================
+// translate.js - 翻译核心逻辑
+// ========================================
+
+// ============= 翻译相关函数 =============
+
+// 执行翻译
+async function handleTranslate() {
+    // 停止功能
+    if (AppState.isLoading && AppState.mainAbortController) {
+        AppState.mainAbortController.abort();
+        setState({ isLoading: false });
+        return;
+    }
+
+    if (!AppState.inputText.trim()) return;
+
+    // 同步基线以防止重复自动翻译
+    AppState.lastTranslatedText = AppState.inputText;
+
+    let srcLang, tgtLang;
+    if (AppState.isAutoDetect) {
+        const detected = detectLanguage(AppState.inputText);
+        srcLang = detected.src;
+        tgtLang = detected.tgt;
+        setState({ sourceLang: srcLang, targetLang: tgtLang }, true);
+    } else {
+        srcLang = AppState.sourceLang;
+        tgtLang = AppState.targetLang;
+    }
+
+    setState({ isLoading: true, error: null, aiInsight: null });
+
+    // 初始化AbortController
+    const controller = new AbortController();
+    AppState.mainAbortController = controller;
+
+    try {
+        const config = getApiConfig();
+        const result = await translateBulk(AppState.inputText, srcLang, tgtLang, config, controller.signal);
+        
+        if (result?.translations) {
+            const pairs = result.translations.map(t => ({
+                src: t.src,
+                tgt: t.tgt,
+                history: [{ src: t.src, tgt: t.tgt }],
+                historyIndex: 0,
+                isUpdating: false
+            }));
+            setState({ translationPairs: pairs, isEditingMode: false });
+        }
+    } catch (err) {
+        if (err.name !== 'AbortError') {
+            setState({ error: err.message || "AI Translation failed. Please try again." });
+            console.error(err);
+        }
+    } finally {
+        setState({ isLoading: false }, true);
+        AppState.mainAbortController = null;
+    }
+}
+
+// 保存行更新
+async function saveRowUpdate(index, manualValues = null) {
+    const original = AppState.translationPairs[index];
+    const currentSrc = manualValues ? manualValues.src : AppState.editValues.src;
+    const currentTgt = manualValues ? manualValues.tgt : AppState.editValues.tgt;
+
+    // 检查是否需要取消现有更新
+    if (original.isUpdating) {
+        const controller = AppState.rowAbortControllers.get(index);
+        if (controller) {
+            controller.abort();
+            AppState.rowAbortControllers.delete(index);
+            updateTranslationPair(index, { isUpdating: false });
+            return;
+        }
+    }
+
+    // 严格检查：如果完全没有变化，立即退出
+    if (currentSrc === original.src && currentTgt === original.tgt) {
+        return;
+    }
+
+    const srcChanged = currentSrc !== original.src;
+    const tgtChanged = currentTgt !== original.tgt;
+    const needsAiUpdate = (srcChanged && !tgtChanged) || (tgtChanged && !srcChanged);
+
+    updateTranslationPair(index, {
+        src: currentSrc,
+        tgt: currentTgt,
+        isUpdating: needsAiUpdate
+    });
+
+    let prompt = "";
+    let updateField = null;
+
+    if (srcChanged && !tgtChanged) {
+        prompt = `You are updating a translation. Original Source: "${original.src}". Current Translation: "${original.tgt}". New Source: "${currentSrc}". Task: Translate the "New Source" to ${AppState.targetLang === 'zh' ? 'Chinese' : 'English'}. Constraint: Keep the style and vocabulary of the "Current Translation" where possible. Return JSON: {"text": "..."}`;
+        updateField = "tgt";
+    } else if (tgtChanged && !srcChanged) {
+        prompt = `You are aligning a source text to match a modified translation. Original Source: "${original.src}". Original Translation: "${original.tgt}". New Translation: "${currentTgt}". Task: Update the "Original Source" in ${AppState.sourceLang === 'zh' ? 'Chinese' : 'English'} so that it matches the meaning AND TONE of the "New Translation". Return JSON: {"text": "..."}`;
+        updateField = "src";
+    }
+
+    if (!updateField) {
+        addHistory(index, currentSrc, currentTgt);
+        return;
+    }
+
+    // AI更新（支持中止）
+    const controller = new AbortController();
+    AppState.rowAbortControllers.set(index, controller);
+
+    try {
+        const config = getApiConfig();
+        const resultText = await getSmartUpdate(prompt, config, controller.signal);
+        const finalSrc = updateField === 'src' ? resultText : currentSrc;
+        const finalTgt = updateField === 'tgt' ? resultText : currentTgt;
+        addHistory(index, finalSrc, finalTgt);
+        // editValues 已在 addHistory 中同步更新
+    } catch (e) {
+        if (e.name !== 'AbortError') {
+            console.error("Smart update failed", e);
+            addHistory(index, currentSrc, currentTgt);
+            setState({ error: e.message || "Smart update failed" });
+        }
+    } finally {
+        AppState.rowAbortControllers.delete(index);
+    }
+}
+
+// 添加历史记录
+function addHistory(index, s, t) {
+    const pairs = [...AppState.translationPairs];
+    const newHistory = [...pairs[index].history, { src: s, tgt: t }];
+    pairs[index] = {
+        ...pairs[index],
+        src: s,
+        tgt: t,
+        history: newHistory,
+        historyIndex: newHistory.length - 1,
+        isUpdating: false
+    };
+    
+    // 同时更新 editValues 以保持同步，避免状态不一致
+    if (AppState.activeIndex === index) {
+        AppState.editValues = { src: s, tgt: t };
+    }
+    
+    setState({ translationPairs: pairs });
+}
+
+// 历史导航
+function handleHistoryNav(index, delta) {
+    const item = AppState.translationPairs[index];
+    const newIdx = item.historyIndex + delta;
+    if (newIdx >= 0 && newIdx < item.history.length) {
+        const historic = item.history[newIdx];
+        const pairs = [...AppState.translationPairs];
+        pairs[index] = { ...item, src: historic.src, tgt: historic.tgt, historyIndex: newIdx };
+        
+        // 同时更新 editValues 以保持同步
+        if (AppState.activeIndex === index) {
+            AppState.editValues = { src: historic.src, tgt: historic.tgt };
+        }
+        
+        setState({ translationPairs: pairs });
+    }
+}
+
+// AI精炼
+async function handleAiRefine(index, field, type) {
+    if (AppState.isRefining) return;
+    setState({ isRefining: true });
+
+    const text = field === 'src' ? AppState.editValues.src : AppState.editValues.tgt;
+    const lang = field === 'src' ? AppState.sourceLang : AppState.targetLang;
+
+    let instruction = undefined;
+    if (type === 'grammar') instruction = AppState.customPrompts.grammar;
+    if (type === 'simplify') instruction = AppState.customPrompts.simplify;
+
+    try {
+        const config = getApiConfig();
+        const customInst = type === 'custom' ? AppState.refinePrompt : instruction;
+        const refined = await refineSentence(text, lang, type, config, customInst);
+        
+        if (refined) {
+            const newVals = { ...AppState.editValues, [field]: refined };
+            setState({ editValues: newVals }, true);
+            await saveRowUpdate(index, newVals);
+        }
+    } catch (e) {
+        setState({ error: e.message || "Refinement failed" });
+    } finally {
+        setState({ isRefining: false });
+        if (type === 'custom') setState({ refinePrompt: "" }, true);
+    }
+}
+
+// 处理文本选择（同义词）
+async function handleTextSelect(event, field, index) {
+    const target = event.target;
+    let start = target.selectionStart;
+    let end = target.selectionEnd;
+
+    if (start === end) return;
+
+    const text = target.value;
+    let selectedText = text.substring(start, end);
+
+    // 去除尾随空格（浏览器双击选词常常会包含尾随空格）
+    const trimmedEnd = selectedText.replace(/\s+$/, '');
+    if (trimmedEnd.length < selectedText.length) {
+        end = start + trimmedEnd.length;
+        selectedText = trimmedEnd;
+        // 更新浏览器的选中范围
+        target.setSelectionRange(start, end);
+    }
+    
+    // 去除前导空格
+    const trimmedStart = selectedText.replace(/^\s+/, '');
+    if (trimmedStart.length < selectedText.length) {
+        start = end - trimmedStart.length;
+        selectedText = trimmedStart;
+        target.setSelectionRange(start, end);
+    }
+
+    if (!selectedText || selectedText.length < 1 || /^\s*$/.test(selectedText)) return;
+
+    updateSynonymState({
+        show: true,
+        loading: true,
+        originalText: selectedText,
+        history: [],
+        pageIndex: 0,
+        position: { x: event.clientX, y: event.clientY },
+        selectionRange: { start, end },
+        field,
+        contextSentence: text
+    });
+
+    try {
+        const lang = field === 'src' ? AppState.sourceLang : AppState.targetLang;
+        const config = getApiConfig();
+        const alternatives = await getSynonyms(text, selectedText, lang, config, []);
+
+        updateSynonymState({
+            loading: false,
+            history: [alternatives]
+        });
+    } catch (err) {
+        console.error(err);
+        updateSynonymState({ show: false });
+    }
+}
+
+// 同义词翻页
+async function handleSynonymPageChange(direction) {
+    const { pageIndex, history, contextSentence, originalText, field } = AppState.synonymState;
+
+    if (direction === -1) {
+        if (pageIndex > 0) {
+            updateSynonymState({ pageIndex: pageIndex - 1 });
+        }
+    } else {
+        if (pageIndex < history.length - 1) {
+            updateSynonymState({ pageIndex: pageIndex + 1 });
+        } else {
+            if (!field) return;
+            const lang = field === 'src' ? AppState.sourceLang : AppState.targetLang;
+
+            updateSynonymState({ loading: true });
+
+            try {
+                const avoidList = history.flat();
+                const config = getApiConfig();
+                const newAlternatives = await getSynonyms(contextSentence, originalText, lang, config, avoidList);
+
+                updateSynonymState({
+                    loading: false,
+                    history: [...history, newAlternatives],
+                    pageIndex: pageIndex + 1
+                });
+            } catch (e) {
+                updateSynonymState({ loading: false });
+            }
+        }
+    }
+}
+
+// 应用同义词
+function applySynonym(synonym) {
+    if (!AppState.synonymState.field || AppState.activeIndex === null) return;
+
+    const field = AppState.synonymState.field;
+    const currentText = AppState.editValues[field];
+    const { start, end } = AppState.synonymState.selectionRange;
+
+    const newText = currentText.substring(0, start) + synonym + currentText.substring(end);
+
+    // 更新状态
+    AppState.editValues[field] = newText;
+    
+    // 直接更新 textarea 的值（避免重新渲染）
+    const textarea = document.getElementById(`editTextarea_${field}_${AppState.activeIndex}`);
+    if (textarea) {
+        textarea.value = newText;
+        // 设置光标位置到替换文本末尾
+        const newCursorPos = start + synonym.length;
+        textarea.setSelectionRange(newCursorPos, newCursorPos);
+        textarea.focus();
+    }
+    
+    // 关闭弹窗
+    updateSynonymState({ show: false });
+}
+
+// 处理摘要
+async function handleSummary() {
+    if (AppState.translationPairs.length === 0) return;
+    
+    setState({ isInsightLoading: true, aiInsight: { type: 'summary', title: 'Loading...', content: '' } });
+    
+    try {
+        const fullText = AppState.translationPairs.map(p => p.src).join('\n');
+        const config = getApiConfig();
+        const summary = await summarizeText(fullText, config);
+        setState({ aiInsight: { type: 'summary', title: '学术摘要', content: summary } });
+    } catch (e) {
+        setState({ aiInsight: null, error: e.message || "Failed to generate summary" });
+    } finally {
+        setState({ isInsightLoading: false });
+    }
+}
+
+// 连接本地服务器
+async function handleConnectLocal() {
+    setState({ isConnectingLocal: true, error: null });
+    
+    try {
+        const models = await fetchLocalModels(AppState.localBaseUrl);
+        setState({ localModels: models });
+        
+        let selectedModelId;
+        if (models.length > 0) {
+            selectedModelId = models[0].id;
+            setState({ apiProvider: 'local', selectedModel: selectedModelId });
+        } else {
+            selectedModelId = 'local-model';
+            setState({ apiProvider: 'local', selectedModel: selectedModelId });
+        }
+        
+        // 保存到 localStorage
+        try {
+            localStorage.setItem('apiProvider', 'local');
+            localStorage.setItem('selectedModel', selectedModelId);
+            localStorage.setItem('localBaseUrl', AppState.localBaseUrl);
+        } catch (e) {}
+        
+        setState({ showLocalSettings: false });
+    } catch (e) {
+        setState({ error: e.message });
+    } finally {
+        setState({ isConnectingLocal: false });
+    }
+}
+
+// ============= 全局历史管理 =============
+
+function addToGlobalHistory(pairs, sid) {
+    if (pairs.length === 0) return;
+
+    let history = [...AppState.globalHistory];
+    const existingIndex = history.findIndex(item => item.id === sid);
+    const updatedPairs = JSON.parse(JSON.stringify(pairs));
+
+    if (existingIndex !== -1) {
+        history[existingIndex] = {
+            ...history[existingIndex],
+            timestamp: Date.now(),
+            pairs: updatedPairs
+        };
+        const item = history.splice(existingIndex, 1)[0];
+        history.unshift(item);
+    } else {
+        const newItem = {
+            id: sid,
+            timestamp: Date.now(),
+            pairs: updatedPairs
+        };
+        history = [newItem, ...history];
+    }
+
+    setState({ globalHistory: history.slice(0, AppState.historyLimit) });
+}
+
+function restoreGlobalHistory(item) {
+    if (AppState.translationPairs.length > 0) {
+        addToGlobalHistory(AppState.translationPairs, AppState.sessionId);
+    }
+
+    AppState.isRestoringHistory = true;
+
+    setState({
+        sessionId: item.id,
+        translationPairs: item.pairs,
+        inputText: item.pairs.map(p => p.src).join('\n'),
+        isEditingMode: false,
+        showHistoryMenu: false
+    });
+
+    setTimeout(() => {
+        AppState.isRestoringHistory = false;
+    }, 500);
+}
+
+// ============= 事件处理 =============
+
+function handleInputChange(value) {
+    // 如果正在恢复历史，跳过
+    if (AppState.isRestoringHistory) {
+        return;
+    }
+
+    // 如果从空变为有内容，创建新会话
+    if (AppState.inputText === "" && value !== "") {
+        if (AppState.translationPairs.length === 0) {
+            AppState.sessionId = Date.now().toString();
+        }
+    }
+
+    AppState.inputText = value;
+    AppState.isEditingMode = true;
+    AppState.isRestoringHistory = false;
+
+    // 如果输入为空，清空状态并重新渲染（需要隐藏翻译结果）
+    if (!value.trim()) {
+        AppState.translationPairs = [];
+        renderApp();
+        return;
+    }
+
+    // 自动翻译防抖
+    if (AppState.isAutoTranslate) {
+        if (AppState.debounceTimer) {
+            clearTimeout(AppState.debounceTimer);
+        }
+        AppState.debounceTimer = setTimeout(() => {
+            if (AppState.isEditingMode && AppState.inputText !== AppState.lastTranslatedText) {
+                handleTranslate();
+            }
+        }, 1500);
+    }
+
+    // 不再调用 renderApp()，避免焦点丢失
+    // 输入时 textarea 的值已经被浏览器更新，无需重新渲染
+}
+
+function handleRowClick(index) {
+    if (AppState.activeIndex !== null && AppState.activeIndex !== index) {
+        saveRowUpdate(AppState.activeIndex);
+    }
+    setState({
+        activeIndex: index,
+        editValues: { 
+            src: AppState.translationPairs[index].src, 
+            tgt: AppState.translationPairs[index].tgt 
+        },
+        isEditingMode: false
+    });
+}
+
+function handleManualSave() {
+    if (AppState.translationPairs.length > 0) {
+        addToGlobalHistory(AppState.translationPairs, AppState.sessionId);
+    }
+}
+
+function handleClear() {
+    if (AppState.mainAbortController) {
+        AppState.mainAbortController.abort();
+    }
+
+    if (AppState.translationPairs.length > 0) {
+        addToGlobalHistory(AppState.translationPairs, AppState.sessionId);
+    }
+
+    AppState.isRestoringHistory = true;
+
+    setState({
+        inputText: "",
+        translationPairs: [],
+        activeIndex: null,
+        isEditingMode: true,
+        isLoading: false,
+        sessionId: Date.now().toString(),
+        error: null
+    });
+
+    updateSynonymState({ show: false });
+
+    setTimeout(() => { 
+        AppState.isRestoringHistory = false; 
+    }, 100);
+    
+    AppState.lastTranslatedText = "";
+}
+
+function toggleEditMode() {
+    if (AppState.isEditingMode) {
+        setState({ isEditingMode: false });
+    } else {
+        const reconstructed = AppState.translationPairs.map(p => p.src).join('\n');
+        setState({ inputText: reconstructed, isEditingMode: true });
+        AppState.lastTranslatedText = reconstructed;
+    }
+}
