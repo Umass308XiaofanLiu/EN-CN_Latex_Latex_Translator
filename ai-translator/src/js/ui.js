@@ -531,13 +531,22 @@ function renderHistoryControls(pair, idx) {
 function renderAiToolbar(side, idx) {
     const isGrammarSettingsOpen = AppState.activeSettingsPopup === 'grammar' && AppState.activeSettingsIndex === idx && AppState.activeSettingsSide === side;
     const isSimplifySettingsOpen = AppState.activeSettingsPopup === 'simplify' && AppState.activeSettingsIndex === idx && AppState.activeSettingsSide === side;
-    
+    const pair = AppState.translationPairs[idx];
+    const isRegenerating = pair?.isRegenerating || false;
+
     return `
         <div class="mt-2 pt-2 border-t border-indigo-50 flex flex-wrap items-center gap-2 relative" onclick="event.stopPropagation();">
             <div class="text-[10px] font-bold text-indigo-400 uppercase tracking-wider mr-1 flex items-center gap-1 select-none">
                 ${Icons.SparklesSmall} ${side === 'src' ? 'Source AI' : 'Target AI'}
             </div>
-            
+
+            <!-- Regenerate Translation Button (只在目标端显示) -->
+            ${side === 'tgt' ? `
+                <button onclick="handleRegenerateTranslation(${idx})" ${isRegenerating ? '' : ''} class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs transition-all ${isRegenerating ? 'bg-rose-100 border border-rose-200 text-rose-600 hover:bg-rose-200' : 'bg-amber-50 border border-amber-200 text-amber-700 hover:bg-amber-100'}" title="${isRegenerating ? '停止重新生成' : '重新生成翻译'}">
+                    ${isRegenerating ? `<span class="animate-spin">${Icons.RefreshCw}</span> Stop` : `${Icons.RefreshCw} Regenerate`}
+                </button>
+            ` : ''}
+
             <!-- Grammar Button Group -->
             <div class="flex items-stretch rounded-lg bg-indigo-50 border border-indigo-100 relative">
                 <button onclick="handleAiRefine(${idx},'${side}','grammar')" ${AppState.isRefining ? 'disabled' : ''} class="flex items-center gap-1.5 px-2 py-1 hover:bg-indigo-100 text-indigo-700 rounded-l-lg text-xs transition-colors disabled:opacity-50">
@@ -549,7 +558,7 @@ function renderAiToolbar(side, idx) {
                 </button>
                 ${isGrammarSettingsOpen ? renderSettingsPopover('grammar') : ''}
             </div>
-            
+
             <!-- Simplify Button Group -->
             <div class="flex items-stretch rounded-lg bg-emerald-50 border border-emerald-100 relative">
                 <button onclick="handleAiRefine(${idx},'${side}','simplify')" ${AppState.isRefining ? 'disabled' : ''} class="flex items-center gap-1.5 px-2 py-1 hover:bg-emerald-100 text-emerald-700 rounded-l-lg text-xs transition-colors disabled:opacity-50">
@@ -561,7 +570,7 @@ function renderAiToolbar(side, idx) {
                 </button>
                 ${isSimplifySettingsOpen ? renderSettingsPopover('simplify') : ''}
             </div>
-            
+
             <!-- Custom Rewrite Input -->
             <div class="flex-grow flex items-center gap-2 bg-indigo-50/50 rounded border border-indigo-100 px-2 py-0.5 focus-within:ring-1 focus-within:ring-indigo-200 transition-all">
                 <span class="text-indigo-300">${Icons.MessageSquare}</span>

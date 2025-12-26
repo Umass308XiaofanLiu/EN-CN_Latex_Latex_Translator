@@ -72,6 +72,7 @@ const AppState = {
     // Abort Controllers
     mainAbortController: null,
     rowAbortControllers: new Map(),
+    regenerateAbortControllers: new Map(),
 
     // Timers
     debounceTimer: null,

@@ -517,3 +517,59 @@ function toggleEditMode() {
         AppState.lastTranslatedText = reconstructed;
     }
 }
+
+// ============= 重新生成翻译 =============
+async function handleRegenerateTranslation(index) {
+    const pair = AppState.translationPairs[index];
+    if (!pair) return;
+
+    // 如果正在重新生成，则取消
+    if (pair.isRegenerating) {
+        const controller = AppState.regenerateAbortControllers?.get(index);
+        if (controller) {
+            controller.abort();
+            AppState.regenerateAbortControllers.delete(index);
+            updateTranslationPair(index, { isRegenerating: false });
+        }
+        return;
+    }
+
+    // 初始化 AbortController Map (如果不存在)
+    if (!AppState.regenerateAbortControllers) {
+        AppState.regenerateAbortControllers = new Map();
+    }
+
+    const controller = new AbortController();
+    AppState.regenerateAbortControllers.set(index, controller);
+
+    // 标记正在重新生成
+    updateTranslationPair(index, { isRegenerating: true });
+
+    try {
+        const config = getApiConfig();
+        const srcText = pair.src;
+
+        // 使用当前语言设置重新翻译
+        const result = await translateBulk(srcText, AppState.sourceLang, AppState.targetLang, config, controller.signal);
+
+        if (result?.translations && result.translations.length > 0) {
+            const newTgt = result.translations[0].tgt;
+
+            // 添加到历史记录
+            addHistory(index, srcText, newTgt);
+
+            // 如果当前正在编辑这一行，同时更新 editValues
+            if (AppState.activeIndex === index) {
+                AppState.editValues.tgt = newTgt;
+            }
+        }
+    } catch (err) {
+        if (err.name !== 'AbortError') {
+            setState({ error: err.message || "重新生成翻译失败，请重试。" });
+            console.error(err);
+        }
+    } finally {
+        AppState.regenerateAbortControllers?.delete(index);
+        updateTranslationPair(index, { isRegenerating: false });
+    }
+}
