@@ -74,7 +74,7 @@ const AppState = {
         'gpt-5-nano': true,
         'gpt-5-mini': true,
         'gpt-5.2': true,
-        'claude-3-5-haiku-20241022': true,
+        'claude-haiku-4-5-20251001': true,
         'claude-sonnet-4-5-20250929': true,
         'claude-opus-4-5-20251101': true
     },
