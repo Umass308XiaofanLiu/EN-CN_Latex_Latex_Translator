@@ -37,7 +37,8 @@ const Icons = {
     Octagon: `<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"/></svg>`,
     Timer: `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="10" x2="14" y1="2" y2="2"/><line x1="12" x2="15" y1="14" y2="11"/><circle cx="12" cy="14" r="8"/></svg>`,
     Settings2: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 7h-9"/><path d="M14 17H5"/><circle cx="17" cy="17" r="3"/><circle cx="7" cy="7" r="3"/></svg>`,
-    MoreVertical: `<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"/><circle cx="12" cy="5" r="1"/><circle cx="12" cy="19" r="1"/></svg>`,
+    SettingsGear: `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>`,
+    MoreVertical: `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"/><circle cx="12" cy="5" r="1"/><circle cx="12" cy="19" r="1"/></svg>`,
     Server: `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="8" x="2" y="2" rx="2" ry="2"/><rect width="20" height="8" x="2" y="14" rx="2" ry="2"/><line x1="6" x2="6.01" y1="6" y2="6"/><line x1="6" x2="6.01" y1="18" y2="18"/></svg>`,
     Globe: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>`,
     AlertCircle: `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>`,
@@ -108,6 +109,7 @@ function renderApp() {
     root.innerHTML = `
         <div class="min-h-screen bg-slate-50 flex flex-col p-4 md:p-6 max-w-[1600px] mx-auto w-full">
             ${renderErrorBanner()}
+            ${renderSettingsModal()}
             ${renderLocalSettingsModal()}
             ${renderSynonymPopup()}
             ${renderHeader()}
@@ -136,21 +138,50 @@ function renderErrorBanner() {
     `;
 }
 
-// ============= 本地设置模态框 =============
-function renderLocalSettingsModal() {
-    if (!AppState.showLocalSettings) return '';
+// ============= 设置模态框 =============
+function renderSettingsModal() {
+    if (!AppState.showSettings) return '';
+
+    const allModels = [
+        { id: 'gemini-2.5-flash-lite', name: 'Gemini 2.5 Flash Lite', provider: 'gemini', iconClass: 'text-emerald-500' },
+        { id: 'gemini-3-flash-preview', name: 'Gemini 3 Flash', provider: 'gemini', iconClass: 'text-orange-500' },
+        { id: 'gemini-3-pro-preview', name: 'Gemini 3 Pro', provider: 'gemini', iconClass: 'text-indigo-600' },
+        { id: 'gpt-5-nano', name: 'GPT-5 Nano', provider: 'openai', iconClass: 'text-teal-500' },
+        { id: 'gpt-5-mini', name: 'GPT-5 Mini', provider: 'openai', iconClass: 'text-green-500' },
+        { id: 'gpt-5.2', name: 'GPT-5.2', provider: 'openai', iconClass: 'text-sky-600' }
+    ];
+
     return `
         <div class="fixed inset-0 z-[100] bg-black/20 backdrop-blur-sm flex items-center justify-center p-4">
-            <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-md overflow-hidden max-h-[90vh] overflow-y-auto">
+            <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-lg overflow-hidden max-h-[90vh] overflow-y-auto">
                 <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50 sticky top-0 z-10">
                     <h3 class="text-sm font-bold text-slate-700 flex items-center gap-2">
-                        ${Icons.Settings2} API Settings
+                        ${Icons.SettingsGear} Settings
                     </h3>
-                    <button onclick="setState({showLocalSettings:false})" class="text-slate-400 hover:text-slate-600">${Icons.X}</button>
+                    <button onclick="closeSettings()" class="text-slate-400 hover:text-slate-600">${Icons.X}</button>
                 </div>
-                <div class="p-6 space-y-5">
+                <div class="p-6 space-y-6">
+                    <!-- Model Visibility Section -->
+                    <div class="pb-5 border-b border-slate-100">
+                        <div class="flex items-center gap-2 mb-4">
+                            <div class="w-6 h-6 bg-gradient-to-br from-violet-500 to-purple-600 rounded-lg flex items-center justify-center text-white">
+                                ${Icons.Eye}
+                            </div>
+                            <span class="text-xs font-bold text-slate-600 uppercase tracking-wide">Model Visibility</span>
+                        </div>
+                        <p class="text-[10px] text-slate-400 mb-3">Select which models to show in the model selector.</p>
+                        <div class="grid grid-cols-2 gap-2">
+                            ${allModels.map(m => `
+                                <label class="flex items-center gap-2 p-2 rounded-lg hover:bg-slate-50 cursor-pointer transition-all ${AppState.modelVisibility[m.id] ? 'bg-indigo-50' : ''}">
+                                    <input type="checkbox" ${AppState.modelVisibility[m.id] ? 'checked' : ''} onchange="toggleModelVisibility('${m.id}')" class="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500">
+                                    <span class="text-xs font-medium ${m.iconClass}">${m.name}</span>
+                                </label>
+                            `).join('')}
+                        </div>
+                    </div>
+
                     <!-- Gemini API Key Section -->
-                    <div class="pb-4 border-b border-slate-100">
+                    <div class="pb-5 border-b border-slate-100">
                         <div class="flex items-center gap-2 mb-3">
                             <div class="w-6 h-6 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center">
                                 <svg class="w-3.5 h-3.5 text-white" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
@@ -173,7 +204,7 @@ function renderLocalSettingsModal() {
                     </div>
 
                     <!-- OpenAI API Key Section -->
-                    <div class="pb-4 border-b border-slate-100">
+                    <div class="pb-5 border-b border-slate-100">
                         <div class="flex items-center gap-2 mb-3">
                             <div class="w-6 h-6 bg-gradient-to-br from-teal-500 to-green-600 rounded-lg flex items-center justify-center">
                                 <svg class="w-3.5 h-3.5 text-white" viewBox="0 0 24 24" fill="currentColor"><path d="M22.2819 9.8211a5.9847 5.9847 0 0 0-.5157-4.9108 6.0462 6.0462 0 0 0-6.5098-2.9A6.0651 6.0651 0 0 0 4.9807 4.1818a5.9847 5.9847 0 0 0-3.9977 2.9 6.0462 6.0462 0 0 0 .7427 7.0966 5.98 5.98 0 0 0 .511 4.9107 6.051 6.051 0 0 0 6.5146 2.9001A5.9847 5.9847 0 0 0 13.2599 24a6.0557 6.0557 0 0 0 5.7718-4.2058 5.9894 5.9894 0 0 0 3.9977-2.9001 6.0557 6.0557 0 0 0-.7475-7.0729zm-9.022 12.6081a4.4755 4.4755 0 0 1-2.8764-1.0408l.1419-.0804 4.7783-2.7582a.7948.7948 0 0 0 .3927-.6813v-6.7369l2.02 1.1686a.071.071 0 0 1 .038.052v5.5826a4.504 4.504 0 0 1-4.4945 4.4944zm-9.6607-4.1254a4.4708 4.4708 0 0 1-.5346-3.0137l.142.0852 4.783 2.7582a.7712.7712 0 0 0 .7806 0l5.8428-3.3685v2.3324a.0804.0804 0 0 1-.0332.0615L9.74 19.9502a4.4992 4.4992 0 0 1-6.1408-1.6464zM2.3408 7.8956a4.485 4.485 0 0 1 2.3655-1.9728V11.6a.7664.7664 0 0 0 .3879.6765l5.8144 3.3543-2.0201 1.1685a.0757.0757 0 0 1-.071 0l-4.8303-2.7865A4.504 4.504 0 0 1 2.3408 7.8956zm16.5963 3.8558L13.1038 8.364 15.1192 7.2a.0757.0757 0 0 1 .071 0l4.8303 2.7913a4.4944 4.4944 0 0 1-.6765 8.1042v-5.6772a.79.79 0 0 0-.407-.667zm2.0107-3.0231l-.142-.0852-4.7735-2.7818a.7759.7759 0 0 0-.7854 0L9.409 9.2297V6.8974a.0662.0662 0 0 1 .0284-.0615l4.8303-2.7866a4.4992 4.4992 0 0 1 6.6802 4.66zM8.3065 12.863l-2.02-1.1638a.0804.0804 0 0 1-.038-.0567V6.0742a4.4992 4.4992 0 0 1 7.3757-3.4537l-.142.0805L8.704 5.459a.7948.7948 0 0 0-.3927.6813zm1.0976-2.3654l2.602-1.4998 2.6069 1.4998v2.9994l-2.5974 1.4997-2.6067-1.4997Z"/></svg>
@@ -217,6 +248,15 @@ function renderLocalSettingsModal() {
             </div>
         </div>
     `;
+}
+
+// ============= 本地设置模态框（保留旧接口兼容性）=============
+function renderLocalSettingsModal() {
+    if (!AppState.showLocalSettings) return '';
+    // 重定向到新的设置模态框
+    AppState.showSettings = true;
+    AppState.showLocalSettings = false;
+    return '';
 }
 
 // ============= 同义词弹窗（现在由 renderSynonymPopupOnly 独立管理）=============
@@ -266,11 +306,14 @@ function renderHeader() {
 function renderSaveButtonGroup() {
     return `
         <div class="relative flex items-center bg-slate-100 rounded-full border border-slate-200">
-            <button onclick="handleManualSave()" ${AppState.translationPairs.length === 0 ? 'disabled' : ''} class="pl-3 pr-2 py-2 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-l-full transition-all disabled:opacity-30 flex items-center gap-1 border-r border-slate-200" title="Manual Save Session">
+            <button onclick="openSettings()" class="pl-3 pr-2 py-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-l-full transition-all border-r border-slate-200" title="Settings">
+                ${Icons.SettingsGear}
+            </button>
+            <button onclick="handleManualSave()" ${AppState.translationPairs.length === 0 ? 'disabled' : ''} class="px-2 py-2 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 transition-all disabled:opacity-30 flex items-center gap-1 border-r border-slate-200" title="Manual Save Session">
                 ${Icons.Save}
             </button>
             <button onclick="toggleSaveMenu()" class="pl-1 pr-2 py-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-r-full transition-all" title="Auto-Save Settings">
-                ${Icons.Timer}
+                ${Icons.MoreVertical}
             </button>
             ${AppState.showSaveMenu ? `
                 <div id="saveMenuPopup" class="absolute top-full right-0 mt-2 w-64 bg-white border border-slate-200 shadow-xl rounded-2xl p-3 z-[60]">
@@ -355,17 +398,21 @@ function renderHistoryMenu() {
 
 // ============= 模型选择器 =============
 function renderModelSelector() {
-    const geminiModels = [
+    const allGeminiModels = [
         { id: 'gemini-2.5-flash-lite', name: 'Gemini 2.5 Flash Lite', sub: 'Fast & Cheap', iconClass: 'text-emerald-500', icon: Icons.Rocket },
         { id: 'gemini-3-flash-preview', name: 'Gemini 3 Flash', sub: 'Speed + Intelligence', iconClass: 'text-orange-500', icon: Icons.Zap },
         { id: 'gemini-3-pro-preview', name: 'Gemini 3 Pro', sub: 'Best Quality', iconClass: 'text-indigo-600', icon: Icons.Cpu }
     ];
 
-    const openaiModels = [
+    const allOpenaiModels = [
         { id: 'gpt-5-nano', name: 'GPT-5 Nano', sub: 'Ultra Fast & Light', iconClass: 'text-teal-500', icon: Icons.Rocket },
         { id: 'gpt-5-mini', name: 'GPT-5 Mini', sub: 'Fast & Balanced', iconClass: 'text-green-500', icon: Icons.Zap },
         { id: 'gpt-5.2', name: 'GPT-5.2', sub: 'Best Quality', iconClass: 'text-sky-600', icon: Icons.Cpu }
     ];
+
+    // 根据可见性设置筛选模型
+    const geminiModels = allGeminiModels.filter(m => AppState.modelVisibility[m.id] !== false);
+    const openaiModels = allOpenaiModels.filter(m => AppState.modelVisibility[m.id] !== false);
 
     let currentIcon, currentIconClass, currentLabel;
     if (AppState.apiProvider === 'local') {
@@ -447,8 +494,8 @@ function renderModelSelector() {
                         ` : `
                             <div class="text-[10px] text-slate-400 italic text-center py-2 bg-slate-50 rounded-lg mb-2">No models fetched yet.</div>
                         `}
-                        <button onclick="openLocalSettings()" class="w-full flex items-center justify-center gap-2 p-2 mt-1 rounded-xl bg-slate-100 hover:bg-indigo-50 text-slate-600 hover:text-indigo-600 text-xs font-bold transition-all border border-transparent hover:border-indigo-100">
-                            ${Icons.Settings2} Configure Server
+                        <button onclick="openSettings()" class="w-full flex items-center justify-center gap-2 p-2 mt-1 rounded-xl bg-slate-100 hover:bg-indigo-50 text-slate-600 hover:text-indigo-600 text-xs font-bold transition-all border border-transparent hover:border-indigo-100">
+                            ${Icons.SettingsGear} Settings
                         </button>
                     </div>
                 </div>
@@ -958,6 +1005,26 @@ function openLocalSettings() {
     renderApp();
 }
 
+function openSettings() {
+    AppState.showSettings = true;
+    AppState.showModelMenu = false;
+    renderApp();
+}
+
+function closeSettings() {
+    AppState.showSettings = false;
+    renderApp();
+}
+
+function toggleModelVisibility(modelId) {
+    AppState.modelVisibility[modelId] = !AppState.modelVisibility[modelId];
+    // 保存到 localStorage
+    try {
+        localStorage.setItem('modelVisibility', JSON.stringify(AppState.modelVisibility));
+    } catch (e) {}
+    renderApp();
+}
+
 function handleConnectLocalClick() {
     const input = document.getElementById('localUrlInput');
     if (input) {
@@ -1139,7 +1206,16 @@ function loadSavedSettings() {
         if (savedSelectedModel) {
             AppState.selectedModel = savedSelectedModel;
         }
-        
+
+        // 加载 Model Visibility 设置
+        const savedModelVisibility = localStorage.getItem('modelVisibility');
+        if (savedModelVisibility) {
+            try {
+                const parsed = JSON.parse(savedModelVisibility);
+                AppState.modelVisibility = { ...AppState.modelVisibility, ...parsed };
+            } catch (e) {}
+        }
+
         // 只要有保存的本地地址，就自动尝试连接（获取模型列表）
         if (savedLocalUrl) {
             autoConnectLocal();

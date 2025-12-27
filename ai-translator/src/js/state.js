@@ -61,7 +61,18 @@ const AppState = {
     showHistoryMenu: false,
     showSaveMenu: false,
     showLocalSettings: false,
+    showSettings: false, // 新增：设置弹窗状态
     isConnectingLocal: false,
+
+    // 模型可见性设置
+    modelVisibility: {
+        'gemini-2.5-flash-lite': true,
+        'gemini-3-flash-preview': true,
+        'gemini-3-pro-preview': true,
+        'gpt-5-nano': true,
+        'gpt-5-mini': true,
+        'gpt-5.2': true
+    },
     
     // AI Toolbar 设置弹窗状态
     activeSettingsPopup: null, // 'grammar' | 'simplify' | null
