@@ -455,6 +455,17 @@ function isNewOpenAIModel(model) {
     return OPENAI_NEW_MODELS.some(m => model.startsWith(m));
 }
 
+// 根据模型获取合适的 max tokens 限制
+function getMaxTokensForModel(model, configMax) {
+    if (configMax) return configMax;
+    // Nano 模型使用较小的 token 限制
+    if (model.includes('nano')) return 2048;
+    // Mini 模型使用中等限制
+    if (model.includes('mini')) return 4096;
+    // 其他模型使用默认值
+    return 4096;
+}
+
 async function callOpenAIAPI(model, messages, config = {}, apiKey = null, signal = null) {
     if (!apiKey) {
         throw new Error("OpenAI API Key not configured. Please add your API key in Settings.");
@@ -471,10 +482,11 @@ async function callOpenAIAPI(model, messages, config = {}, apiKey = null, signal
     }
 
     // 新模型使用 max_completion_tokens，旧模型使用 max_tokens
+    const maxTokens = getMaxTokensForModel(model, config.max_tokens);
     if (isNewOpenAIModel(model)) {
-        body.max_completion_tokens = config.max_tokens || 4096;
+        body.max_completion_tokens = maxTokens;
     } else {
-        body.max_tokens = config.max_tokens || 4096;
+        body.max_tokens = maxTokens;
     }
 
     // 如果需要JSON响应（新模型不支持 response_format，通过 prompt 指示返回 JSON）
