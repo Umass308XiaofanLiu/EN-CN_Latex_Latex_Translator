@@ -460,8 +460,8 @@ async function callOpenAIAPI(model, messages, config = {}, apiKey = null, signal
         body.max_tokens = config.max_tokens || 4096;
     }
 
-    // 如果需要JSON响应
-    if (config.jsonMode) {
+    // 如果需要JSON响应（新模型不支持 response_format，通过 prompt 指示返回 JSON）
+    if (config.jsonMode && !isNewOpenAIModel(model)) {
         body.response_format = { type: "json_object" };
     }
 
