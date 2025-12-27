@@ -150,8 +150,8 @@ function renderSettingsModal() {
         { id: 'gpt-5-mini', name: 'GPT-5 Mini', provider: 'openai', iconClass: 'text-green-500' },
         { id: 'gpt-5.2', name: 'GPT-5.2', provider: 'openai', iconClass: 'text-sky-600' },
         { id: 'claude-3-5-haiku-20241022', name: 'Claude 3.5 Haiku', provider: 'claude', iconClass: 'text-amber-500' },
-        { id: 'claude-sonnet-4-5-20250514', name: 'Claude Sonnet 4.5', provider: 'claude', iconClass: 'text-orange-600' },
-        { id: 'claude-opus-4-5-20250514', name: 'Claude Opus 4.5', provider: 'claude', iconClass: 'text-rose-600' }
+        { id: 'claude-sonnet-4-5-20250929', name: 'Claude Sonnet 4.5', provider: 'claude', iconClass: 'text-orange-600' },
+        { id: 'claude-opus-4-5-20251101', name: 'Claude Opus 4.5', provider: 'claude', iconClass: 'text-rose-600' }
     ];
 
     return `
@@ -483,8 +483,8 @@ function renderModelSelector() {
 
     const allClaudeModels = [
         { id: 'claude-3-5-haiku-20241022', name: 'Claude 3.5 Haiku', sub: 'Fast & Efficient', iconClass: 'text-amber-500', icon: Icons.Rocket },
-        { id: 'claude-sonnet-4-5-20250514', name: 'Claude Sonnet 4.5', sub: 'Balanced Performance', iconClass: 'text-orange-600', icon: Icons.Zap },
-        { id: 'claude-opus-4-5-20250514', name: 'Claude Opus 4.5', sub: 'Best Quality', iconClass: 'text-rose-600', icon: Icons.Cpu }
+        { id: 'claude-sonnet-4-5-20250929', name: 'Claude Sonnet 4.5', sub: 'Balanced Performance', iconClass: 'text-orange-600', icon: Icons.Zap },
+        { id: 'claude-opus-4-5-20251101', name: 'Claude Opus 4.5', sub: 'Best Quality', iconClass: 'text-rose-600', icon: Icons.Cpu }
     ];
 
     // 根据可见性设置筛选模型

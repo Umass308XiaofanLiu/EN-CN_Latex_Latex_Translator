@@ -75,8 +75,8 @@ const AppState = {
         'gpt-5-mini': true,
         'gpt-5.2': true,
         'claude-3-5-haiku-20241022': true,
-        'claude-sonnet-4-5-20250514': true,
-        'claude-opus-4-5-20250514': true
+        'claude-sonnet-4-5-20250929': true,
+        'claude-opus-4-5-20251101': true
     },
     
     // AI Toolbar 设置弹窗状态
