@@ -200,11 +200,32 @@ async function handleAiRefine(index, field, type) {
         const config = getApiConfig();
         const customInst = type === 'custom' ? AppState.refinePrompt : instruction;
         const refined = await refineSentence(text, lang, type, config, customInst);
-        
+
         if (refined) {
-            const newVals = { ...AppState.editValues, [field]: refined };
-            setState({ editValues: newVals }, true);
-            await saveRowUpdate(index, newVals);
+            // 检测 AI 返回的 "无需修改" 标记或常见的无修改响应
+            const noChangePatterns = [
+                '[NO_CHANGES]',
+                'already grammatically correct',
+                'no grammar errors',
+                'no changes needed',
+                'text is correct',
+                '没有语法错误',
+                '语法正确',
+                '无需修改'
+            ];
+
+            const isNoChange = noChangePatterns.some(pattern =>
+                refined.toLowerCase().includes(pattern.toLowerCase())
+            ) || refined.trim() === text.trim();
+
+            if (isNoChange) {
+                // 显示提示框而不是替换文本
+                showToast(type === 'grammar' ? '✓ No grammar errors found' : '✓ Text is already simple enough', 'success');
+            } else {
+                const newVals = { ...AppState.editValues, [field]: refined };
+                setState({ editValues: newVals }, true);
+                await saveRowUpdate(index, newVals);
+            }
         }
     } catch (e) {
         setState({ error: e.message || "Refinement failed" });
@@ -212,6 +233,14 @@ async function handleAiRefine(index, field, type) {
         setState({ isRefining: false });
         if (type === 'custom') setState({ refinePrompt: "" }, true);
     }
+}
+
+// 显示 Toast 提示
+function showToast(message, type = 'info') {
+    setState({ toast: { message, type } });
+    setTimeout(() => {
+        setState({ toast: null });
+    }, 3000);
 }
 
 // 处理文本选择（同义词）
@@ -473,18 +502,103 @@ function handleInputChange(value) {
     // 输入时 textarea 的值已经被浏览器更新，无需重新渲染
 }
 
-function handleRowClick(index) {
+function handleRowClick(index, clickedSide = null) {
     if (AppState.activeIndex !== null && AppState.activeIndex !== index) {
         saveRowUpdate(AppState.activeIndex);
     }
+
+    // 在 setState 之前保存滚动位置和点击行的位置信息
+    const sourceContainer = document.querySelector('section:first-of-type .overflow-y-auto');
+    const targetContainer = document.querySelector('section:last-of-type .overflow-y-auto');
+
+    let savedScrollInfo = null;
+    if (sourceContainer && targetContainer && clickedSide) {
+        const clickedContainer = clickedSide === 'src' ? sourceContainer : targetContainer;
+        const clickedRow = clickedContainer.querySelector(`[data-idx="${index}"]`);
+
+        if (clickedRow) {
+            const containerRect = clickedContainer.getBoundingClientRect();
+            const rowRect = clickedRow.getBoundingClientRect();
+            savedScrollInfo = {
+                clickedSide: clickedSide,
+                clickedScrollTop: clickedContainer.scrollTop,
+                rowRelativeTop: rowRect.top - containerRect.top, // 行相对于容器顶部的位置
+                index: index
+            };
+        }
+    }
+
+    // 使用 preserveScroll: false，因为我们有自己的滚动同步逻辑
     setState({
         activeIndex: index,
-        editValues: { 
-            src: AppState.translationPairs[index].src, 
-            tgt: AppState.translationPairs[index].tgt 
+        editValues: {
+            src: AppState.translationPairs[index].src,
+            tgt: AppState.translationPairs[index].tgt
         },
         isEditingMode: false
+    }, { preserveScroll: false });
+
+    // 滚动同步：恢复点击侧的滚动位置，并同步另一侧
+    if (savedScrollInfo) {
+        requestAnimationFrame(() => {
+            syncScrollAfterRender(savedScrollInfo);
+        });
+    }
+}
+
+// 渲染后恢复滚动位置并同步
+function syncScrollAfterRender(scrollInfo) {
+    const sourceContainer = document.querySelector('section:first-of-type .overflow-y-auto');
+    const targetContainer = document.querySelector('section:last-of-type .overflow-y-auto');
+
+    if (!sourceContainer || !targetContainer) return;
+
+    const { clickedSide, clickedScrollTop, rowRelativeTop, index } = scrollInfo;
+
+    const clickedContainer = clickedSide === 'src' ? sourceContainer : targetContainer;
+    const otherContainer = clickedSide === 'src' ? targetContainer : sourceContainer;
+
+    // 1. 恢复点击侧的滚动位置
+    clickedContainer.scrollTop = clickedScrollTop;
+
+    // 2. 找到另一侧对应的行，并滚动到相同的相对位置
+    const otherRow = otherContainer.querySelector(`[data-idx="${index}"]`);
+    if (otherRow) {
+        // 计算另一侧需要滚动到的位置，使对应行在相同的相对位置
+        const otherRowOffsetTop = otherRow.offsetTop;
+        otherContainer.scrollTop = otherRowOffsetTop - rowRelativeTop;
+    }
+}
+
+// 全局点击处理 - 点击空白区域退出编辑模式
+function handleGlobalClick(event) {
+    // 如果没有正在编辑的句子，直接返回
+    if (AppState.activeIndex === null) return;
+
+    // 检查点击的目标是否在句子行内
+    const clickedRow = event.target.closest('[data-idx]');
+    if (clickedRow) return;
+
+    // 检查是否点击了模态框、菜单、按钮等交互元素
+    const clickedModal = event.target.closest('.fixed.inset-0'); // 模态框
+    const clickedButton = event.target.closest('button');
+    const clickedInput = event.target.closest('input, textarea, select');
+    const clickedDropdown = event.target.closest('[onclick*="toggle"], [onclick*="Menu"], [onclick*="Settings"]');
+
+    // 如果点击了这些元素，不退出编辑模式
+    if (clickedModal || clickedButton || clickedInput || clickedDropdown) return;
+
+    // 点击了空白区域，保存当前编辑并退出编辑模式
+    saveRowUpdate(AppState.activeIndex);
+    setState({
+        activeIndex: null,
+        editValues: { src: '', tgt: '' }
     });
+}
+
+// 向后兼容的局部处理函数
+function handleBlankAreaClick(event) {
+    handleGlobalClick(event);
 }
 
 function handleManualSave() {

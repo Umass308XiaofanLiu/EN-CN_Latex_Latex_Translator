@@ -79,6 +79,9 @@ const AppState = {
     isRefining: false,
     customPrompts: { grammar: "", simplify: "" },
 
+    // Toast 提示
+    toast: null, // { message: string, type: 'info' | 'success' | 'warning' }
+
     // AI Insight
     aiInsight: null,
     isInsightLoading: false,
@@ -160,10 +163,18 @@ function getApiConfig() {
 }
 
 // 状态更新并触发UI重渲染
-function setState(updates, skipRender = false) {
+// options: { skipRender: bool, preserveScroll: bool (default true) }
+function setState(updates, options = {}) {
+    // 兼容旧的 skipRender 布尔参数
+    if (typeof options === 'boolean') {
+        options = { skipRender: options };
+    }
+    const { skipRender = false, preserveScroll = true } = options;
+
     Object.assign(AppState, updates);
     if (!skipRender && typeof renderApp === 'function') {
-        renderApp();
+        // renderApp 现在内置滚动保护，传递 preserveScroll 参数
+        renderApp(preserveScroll);
     }
 }
 
@@ -305,7 +316,18 @@ function renderFormattedText(text) {
         });
     };
     
-    pushPlaceholder(/\\begin\{([\w\*]+)\}([\s\S]*?)\\end\{\1\}/g, 'display', (match) => match);
+    pushPlaceholder(/\\begin\{([\w\*]+)\}([\s\S]*?)\\end\{\1\}/g, 'display', (match, env, body) => {
+        // 将带编号的环境转换为不带编号的版本
+        const envMap = {
+            'equation': 'equation*',
+            'align': 'align*',
+            'gather': 'gather*',
+            'multline': 'multline*',
+            'eqnarray': 'eqnarray*'
+        };
+        const noNumberEnv = envMap[env] || env;
+        return `\\begin{${noNumberEnv}}${body}\\end{${noNumberEnv}}`;
+    });
     pushPlaceholder(/\\\[([\s\S]*?)\\\]/g, 'display', (match, p1) => p1);
     pushPlaceholder(/\$\$([\s\S]*?)\$\$/g, 'display', (match, p1) => p1);
     pushPlaceholder(/\\\(([\s\S]*?)\\\)/g, 'inline', (match, p1) => p1);
@@ -708,7 +730,14 @@ async function refineSentence(text, lang, type, config, instruction = null, sign
 
     if (type === "grammar") {
         const baseInst = instruction || `${DEFAULT_GRAMMAR_PROMPT} (Language: ${lang === 'zh' ? 'Chinese' : 'English'})`;
-        prompt = `${baseInst} Return ONLY the corrected sentence, nothing else.\n\nText: "${text}"`;
+        prompt = `${baseInst}
+
+IMPORTANT RULES:
+1. If there are grammar errors, return ONLY the corrected sentence.
+2. If the text is already grammatically correct, return exactly: [NO_CHANGES]
+3. Do NOT explain or describe what you did. Return ONLY the corrected text or [NO_CHANGES].
+
+Text: "${text}"`;
     } else if (type === "simplify") {
         const baseInst = instruction || `${DEFAULT_SIMPLIFY_PROMPT} (Language: ${lang === 'zh' ? 'Chinese' : 'English'})
 CRITICAL RULES:
@@ -1171,11 +1200,32 @@ async function handleAiRefine(index, field, type) {
         const config = getApiConfig();
         const customInst = type === 'custom' ? AppState.refinePrompt : instruction;
         const refined = await refineSentence(text, lang, type, config, customInst);
-        
+
         if (refined) {
-            const newVals = { ...AppState.editValues, [field]: refined };
-            setState({ editValues: newVals }, true);
-            await saveRowUpdate(index, newVals);
+            // 检测 AI 返回的 "无需修改" 标记或常见的无修改响应
+            const noChangePatterns = [
+                '[NO_CHANGES]',
+                'already grammatically correct',
+                'no grammar errors',
+                'no changes needed',
+                'text is correct',
+                '没有语法错误',
+                '语法正确',
+                '无需修改'
+            ];
+
+            const isNoChange = noChangePatterns.some(pattern =>
+                refined.toLowerCase().includes(pattern.toLowerCase())
+            ) || refined.trim() === text.trim();
+
+            if (isNoChange) {
+                // 显示提示框而不是替换文本
+                showToast(type === 'grammar' ? '✓ No grammar errors found' : '✓ Text is already simple enough', 'success');
+            } else {
+                const newVals = { ...AppState.editValues, [field]: refined };
+                setState({ editValues: newVals }, true);
+                await saveRowUpdate(index, newVals);
+            }
         }
     } catch (e) {
         setState({ error: e.message || "Refinement failed" });
@@ -1183,6 +1233,14 @@ async function handleAiRefine(index, field, type) {
         setState({ isRefining: false });
         if (type === 'custom') setState({ refinePrompt: "" }, true);
     }
+}
+
+// 显示 Toast 提示
+function showToast(message, type = 'info') {
+    setState({ toast: { message, type } });
+    setTimeout(() => {
+        setState({ toast: null });
+    }, 3000);
 }
 
 // 处理文本选择（同义词）
@@ -1444,18 +1502,103 @@ function handleInputChange(value) {
     // 输入时 textarea 的值已经被浏览器更新，无需重新渲染
 }
 
-function handleRowClick(index) {
+function handleRowClick(index, clickedSide = null) {
     if (AppState.activeIndex !== null && AppState.activeIndex !== index) {
         saveRowUpdate(AppState.activeIndex);
     }
+
+    // 在 setState 之前保存滚动位置和点击行的位置信息
+    const sourceContainer = document.querySelector('section:first-of-type .overflow-y-auto');
+    const targetContainer = document.querySelector('section:last-of-type .overflow-y-auto');
+
+    let savedScrollInfo = null;
+    if (sourceContainer && targetContainer && clickedSide) {
+        const clickedContainer = clickedSide === 'src' ? sourceContainer : targetContainer;
+        const clickedRow = clickedContainer.querySelector(`[data-idx="${index}"]`);
+
+        if (clickedRow) {
+            const containerRect = clickedContainer.getBoundingClientRect();
+            const rowRect = clickedRow.getBoundingClientRect();
+            savedScrollInfo = {
+                clickedSide: clickedSide,
+                clickedScrollTop: clickedContainer.scrollTop,
+                rowRelativeTop: rowRect.top - containerRect.top, // 行相对于容器顶部的位置
+                index: index
+            };
+        }
+    }
+
+    // 使用 preserveScroll: false，因为我们有自己的滚动同步逻辑
     setState({
         activeIndex: index,
-        editValues: { 
-            src: AppState.translationPairs[index].src, 
-            tgt: AppState.translationPairs[index].tgt 
+        editValues: {
+            src: AppState.translationPairs[index].src,
+            tgt: AppState.translationPairs[index].tgt
         },
         isEditingMode: false
+    }, { preserveScroll: false });
+
+    // 滚动同步：恢复点击侧的滚动位置，并同步另一侧
+    if (savedScrollInfo) {
+        requestAnimationFrame(() => {
+            syncScrollAfterRender(savedScrollInfo);
+        });
+    }
+}
+
+// 渲染后恢复滚动位置并同步
+function syncScrollAfterRender(scrollInfo) {
+    const sourceContainer = document.querySelector('section:first-of-type .overflow-y-auto');
+    const targetContainer = document.querySelector('section:last-of-type .overflow-y-auto');
+
+    if (!sourceContainer || !targetContainer) return;
+
+    const { clickedSide, clickedScrollTop, rowRelativeTop, index } = scrollInfo;
+
+    const clickedContainer = clickedSide === 'src' ? sourceContainer : targetContainer;
+    const otherContainer = clickedSide === 'src' ? targetContainer : sourceContainer;
+
+    // 1. 恢复点击侧的滚动位置
+    clickedContainer.scrollTop = clickedScrollTop;
+
+    // 2. 找到另一侧对应的行，并滚动到相同的相对位置
+    const otherRow = otherContainer.querySelector(`[data-idx="${index}"]`);
+    if (otherRow) {
+        // 计算另一侧需要滚动到的位置，使对应行在相同的相对位置
+        const otherRowOffsetTop = otherRow.offsetTop;
+        otherContainer.scrollTop = otherRowOffsetTop - rowRelativeTop;
+    }
+}
+
+// 全局点击处理 - 点击空白区域退出编辑模式
+function handleGlobalClick(event) {
+    // 如果没有正在编辑的句子，直接返回
+    if (AppState.activeIndex === null) return;
+
+    // 检查点击的目标是否在句子行内
+    const clickedRow = event.target.closest('[data-idx]');
+    if (clickedRow) return;
+
+    // 检查是否点击了模态框、菜单、按钮等交互元素
+    const clickedModal = event.target.closest('.fixed.inset-0'); // 模态框
+    const clickedButton = event.target.closest('button');
+    const clickedInput = event.target.closest('input, textarea, select');
+    const clickedDropdown = event.target.closest('[onclick*="toggle"], [onclick*="Menu"], [onclick*="Settings"]');
+
+    // 如果点击了这些元素，不退出编辑模式
+    if (clickedModal || clickedButton || clickedInput || clickedDropdown) return;
+
+    // 点击了空白区域，保存当前编辑并退出编辑模式
+    saveRowUpdate(AppState.activeIndex);
+    setState({
+        activeIndex: null,
+        editValues: { src: '', tgt: '' }
     });
+}
+
+// 向后兼容的局部处理函数
+function handleBlankAreaClick(event) {
+    handleGlobalClick(event);
 }
 
 function handleManualSave() {
@@ -1725,7 +1868,16 @@ function adjustAllPopups() {
 }
 
 // ============= 主渲染函数 =============
-function renderApp() {
+function renderApp(preserveScroll = true) {
+    // 保存滚动位置
+    let savedSourceScroll = 0, savedTargetScroll = 0;
+    if (preserveScroll) {
+        const sourceContainer = document.querySelector('section:first-of-type .overflow-y-auto');
+        const targetContainer = document.querySelector('section:last-of-type .overflow-y-auto');
+        savedSourceScroll = sourceContainer ? sourceContainer.scrollTop : 0;
+        savedTargetScroll = targetContainer ? targetContainer.scrollTop : 0;
+    }
+
     const root = document.getElementById('root');
     root.innerHTML = `
         <div class="min-h-screen bg-slate-50 flex flex-col p-4 md:p-6 max-w-[1600px] mx-auto w-full">
@@ -1733,6 +1885,7 @@ function renderApp() {
             ${renderSettingsModal()}
             ${renderLocalSettingsModal()}
             ${renderSynonymPopup()}
+            ${renderToast()}
             ${renderHeader()}
             ${renderMainWorkspace()}
             ${renderFooter()}
@@ -1742,6 +1895,14 @@ function renderApp() {
 
     // 同义词弹窗独立渲染到 body（避免被 root 内容替换影响）
     renderSynonymPopupOnly();
+
+    // 同步恢复滚动位置（不使用 requestAnimationFrame，避免多次渲染时的竞态条件）
+    if (preserveScroll) {
+        const newSourceContainer = document.querySelector('section:first-of-type .overflow-y-auto');
+        const newTargetContainer = document.querySelector('section:last-of-type .overflow-y-auto');
+        if (newSourceContainer) newSourceContainer.scrollTop = savedSourceScroll;
+        if (newTargetContainer) newTargetContainer.scrollTop = savedTargetScroll;
+    }
 
     // 渲染后调整弹窗位置
     adjustAllPopups();
@@ -1755,6 +1916,23 @@ function renderErrorBanner() {
             ${Icons.AlertCircle}
             <span class="text-xs font-medium">${escapeHtml(AppState.error)}</span>
             <button onclick="setState({error:null})" class="ml-2 hover:bg-rose-100 p-1 rounded-full">${Icons.XSmall}</button>
+        </div>
+    `;
+}
+
+// ============= Toast 提示框 =============
+function renderToast() {
+    if (!AppState.toast) return '';
+
+    const bgColor = {
+        'success': 'bg-emerald-50 border-emerald-200 text-emerald-700',
+        'warning': 'bg-amber-50 border-amber-200 text-amber-700',
+        'info': 'bg-blue-50 border-blue-200 text-blue-700'
+    }[AppState.toast.type] || 'bg-slate-50 border-slate-200 text-slate-700';
+
+    return `
+        <div class="fixed top-16 left-1/2 -translate-x-1/2 z-[100] ${bgColor} border px-5 py-3 rounded-xl shadow-xl flex items-center gap-3 backdrop-blur-sm bg-opacity-95 transition-all duration-300" onclick="setState({toast:null})">
+            <span class="text-sm font-medium">${escapeHtml(AppState.toast.message)}</span>
         </div>
     `;
 }
@@ -2286,7 +2464,7 @@ function renderSourcePanel() {
             </div>
             <div class="flex-grow flex flex-col overflow-hidden bg-slate-50/20">
                 ${AppState.translationPairs.length > 0 && AppState.viewMode === 'preview' ? `
-                    <div class="overflow-y-auto h-full custom-scrollbar p-4 space-y-2">
+                    <div class="overflow-y-auto h-full custom-scrollbar p-4 space-y-2" onclick="handleBlankAreaClick(event)">
                         ${AppState.translationPairs.map((pair, idx) => renderPairRow('src', pair, idx)).join('')}
                     </div>
                 ` : AppState.translationPairs.length > 0 && AppState.viewMode === 'original' ? `
@@ -2312,7 +2490,7 @@ function renderTargetPanel() {
                 <h3 class="text-xs font-black text-slate-400 uppercase tracking-[0.2em]">Target Panel</h3>
                 <button onclick="copyTargetText()" class="p-2 text-slate-400 hover:text-indigo-600 transition-colors">${Icons.Copy}</button>
             </div>
-            <div class="flex-grow p-4 overflow-y-auto custom-scrollbar bg-slate-50/20">
+            <div class="flex-grow p-4 overflow-y-auto custom-scrollbar bg-slate-50/20" onclick="handleBlankAreaClick(event)">
                 ${AppState.isLoading && AppState.translationPairs.length === 0 ? `
                     <div class="h-full flex flex-col items-center justify-center text-slate-400 animate-pulse">
                         <span class="text-indigo-300 mb-6">${Icons.LoaderLarge}</span>
@@ -2324,7 +2502,7 @@ function renderTargetPanel() {
                         <p class="text-xl font-black uppercase tracking-widest">Awaiting Input</p>
                     </div>
                 ` : `
-                    <div class="space-y-2 pb-24">
+                    <div class="space-y-2 pb-24" onclick="handleBlankAreaClick(event)">
                         ${AppState.translationPairs.map((pair, idx) => renderPairRow('tgt', pair, idx)).join('')}
                     </div>
                 `}
@@ -2388,7 +2566,7 @@ function renderPairRow(side, pair, idx) {
         `;
     } else {
         return `
-            <div class="group relative p-4 rounded-xl transition-all border cursor-pointer mb-2 border-transparent hover:bg-white/80 hover:shadow-md" onclick="handleRowClick(${idx})" data-idx="${idx}" data-side="${side}">
+            <div class="group relative p-4 rounded-xl transition-all border cursor-pointer mb-2 border-transparent hover:bg-white/80 hover:shadow-md" onclick="handleRowClick(${idx},'${side}')" data-idx="${idx}" data-side="${side}">
                 <div class="prose prose-slate prose-sm max-w-none text-slate-700 leading-relaxed transition-all ${pair.isUpdating ? 'opacity-30 blur-[2px]' : ''}">${renderFormattedText(textValue)}</div>
             </div>
         `;
@@ -2887,8 +3065,12 @@ function applyCustomAutoSave() {
 document.addEventListener('DOMContentLoaded', function() {
     // 加载保存的设置
     loadSavedSettings();
-    
-    renderApp();
+
+    // 初始渲染不需要保留滚动位置
+    renderApp(false);
+
+    // 全局点击事件 - 点击空白区域退出编辑模式
+    document.addEventListener('click', handleGlobalClick);
 
     // 自动保存定时器
     setInterval(function() {

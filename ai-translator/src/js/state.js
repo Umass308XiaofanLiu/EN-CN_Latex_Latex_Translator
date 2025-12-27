@@ -35,6 +35,9 @@ const AppState = {
     isRefining: false,
     customPrompts: { grammar: "", simplify: "" },
 
+    // Toast 提示
+    toast: null, // { message: string, type: 'info' | 'success' | 'warning' }
+
     // AI Insight
     aiInsight: null,
     isInsightLoading: false,
@@ -116,10 +119,18 @@ function getApiConfig() {
 }
 
 // 状态更新并触发UI重渲染
-function setState(updates, skipRender = false) {
+// options: { skipRender: bool, preserveScroll: bool (default true) }
+function setState(updates, options = {}) {
+    // 兼容旧的 skipRender 布尔参数
+    if (typeof options === 'boolean') {
+        options = { skipRender: options };
+    }
+    const { skipRender = false, preserveScroll = true } = options;
+
     Object.assign(AppState, updates);
     if (!skipRender && typeof renderApp === 'function') {
-        renderApp();
+        // renderApp 现在内置滚动保护，传递 preserveScroll 参数
+        renderApp(preserveScroll);
     }
 }
 
@@ -261,7 +272,18 @@ function renderFormattedText(text) {
         });
     };
     
-    pushPlaceholder(/\\begin\{([\w\*]+)\}([\s\S]*?)\\end\{\1\}/g, 'display', (match) => match);
+    pushPlaceholder(/\\begin\{([\w\*]+)\}([\s\S]*?)\\end\{\1\}/g, 'display', (match, env, body) => {
+        // 将带编号的环境转换为不带编号的版本
+        const envMap = {
+            'equation': 'equation*',
+            'align': 'align*',
+            'gather': 'gather*',
+            'multline': 'multline*',
+            'eqnarray': 'eqnarray*'
+        };
+        const noNumberEnv = envMap[env] || env;
+        return `\\begin{${noNumberEnv}}${body}\\end{${noNumberEnv}}`;
+    });
     pushPlaceholder(/\\\[([\s\S]*?)\\\]/g, 'display', (match, p1) => p1);
     pushPlaceholder(/\$\$([\s\S]*?)\$\$/g, 'display', (match, p1) => p1);
     pushPlaceholder(/\\\(([\s\S]*?)\\\)/g, 'inline', (match, p1) => p1);

@@ -104,7 +104,16 @@ function adjustAllPopups() {
 }
 
 // ============= 主渲染函数 =============
-function renderApp() {
+function renderApp(preserveScroll = true) {
+    // 保存滚动位置
+    let savedSourceScroll = 0, savedTargetScroll = 0;
+    if (preserveScroll) {
+        const sourceContainer = document.querySelector('section:first-of-type .overflow-y-auto');
+        const targetContainer = document.querySelector('section:last-of-type .overflow-y-auto');
+        savedSourceScroll = sourceContainer ? sourceContainer.scrollTop : 0;
+        savedTargetScroll = targetContainer ? targetContainer.scrollTop : 0;
+    }
+
     const root = document.getElementById('root');
     root.innerHTML = `
         <div class="min-h-screen bg-slate-50 flex flex-col p-4 md:p-6 max-w-[1600px] mx-auto w-full">
@@ -112,6 +121,7 @@ function renderApp() {
             ${renderSettingsModal()}
             ${renderLocalSettingsModal()}
             ${renderSynonymPopup()}
+            ${renderToast()}
             ${renderHeader()}
             ${renderMainWorkspace()}
             ${renderFooter()}
@@ -121,6 +131,14 @@ function renderApp() {
 
     // 同义词弹窗独立渲染到 body（避免被 root 内容替换影响）
     renderSynonymPopupOnly();
+
+    // 同步恢复滚动位置（不使用 requestAnimationFrame，避免多次渲染时的竞态条件）
+    if (preserveScroll) {
+        const newSourceContainer = document.querySelector('section:first-of-type .overflow-y-auto');
+        const newTargetContainer = document.querySelector('section:last-of-type .overflow-y-auto');
+        if (newSourceContainer) newSourceContainer.scrollTop = savedSourceScroll;
+        if (newTargetContainer) newTargetContainer.scrollTop = savedTargetScroll;
+    }
 
     // 渲染后调整弹窗位置
     adjustAllPopups();
@@ -134,6 +152,23 @@ function renderErrorBanner() {
             ${Icons.AlertCircle}
             <span class="text-xs font-medium">${escapeHtml(AppState.error)}</span>
             <button onclick="setState({error:null})" class="ml-2 hover:bg-rose-100 p-1 rounded-full">${Icons.XSmall}</button>
+        </div>
+    `;
+}
+
+// ============= Toast 提示框 =============
+function renderToast() {
+    if (!AppState.toast) return '';
+
+    const bgColor = {
+        'success': 'bg-emerald-50 border-emerald-200 text-emerald-700',
+        'warning': 'bg-amber-50 border-amber-200 text-amber-700',
+        'info': 'bg-blue-50 border-blue-200 text-blue-700'
+    }[AppState.toast.type] || 'bg-slate-50 border-slate-200 text-slate-700';
+
+    return `
+        <div class="fixed top-16 left-1/2 -translate-x-1/2 z-[100] ${bgColor} border px-5 py-3 rounded-xl shadow-xl flex items-center gap-3 backdrop-blur-sm bg-opacity-95 transition-all duration-300" onclick="setState({toast:null})">
+            <span class="text-sm font-medium">${escapeHtml(AppState.toast.message)}</span>
         </div>
     `;
 }
@@ -665,7 +700,7 @@ function renderSourcePanel() {
             </div>
             <div class="flex-grow flex flex-col overflow-hidden bg-slate-50/20">
                 ${AppState.translationPairs.length > 0 && AppState.viewMode === 'preview' ? `
-                    <div class="overflow-y-auto h-full custom-scrollbar p-4 space-y-2">
+                    <div class="overflow-y-auto h-full custom-scrollbar p-4 space-y-2" onclick="handleBlankAreaClick(event)">
                         ${AppState.translationPairs.map((pair, idx) => renderPairRow('src', pair, idx)).join('')}
                     </div>
                 ` : AppState.translationPairs.length > 0 && AppState.viewMode === 'original' ? `
@@ -691,7 +726,7 @@ function renderTargetPanel() {
                 <h3 class="text-xs font-black text-slate-400 uppercase tracking-[0.2em]">Target Panel</h3>
                 <button onclick="copyTargetText()" class="p-2 text-slate-400 hover:text-indigo-600 transition-colors">${Icons.Copy}</button>
             </div>
-            <div class="flex-grow p-4 overflow-y-auto custom-scrollbar bg-slate-50/20">
+            <div class="flex-grow p-4 overflow-y-auto custom-scrollbar bg-slate-50/20" onclick="handleBlankAreaClick(event)">
                 ${AppState.isLoading && AppState.translationPairs.length === 0 ? `
                     <div class="h-full flex flex-col items-center justify-center text-slate-400 animate-pulse">
                         <span class="text-indigo-300 mb-6">${Icons.LoaderLarge}</span>
@@ -703,7 +738,7 @@ function renderTargetPanel() {
                         <p class="text-xl font-black uppercase tracking-widest">Awaiting Input</p>
                     </div>
                 ` : `
-                    <div class="space-y-2 pb-24">
+                    <div class="space-y-2 pb-24" onclick="handleBlankAreaClick(event)">
                         ${AppState.translationPairs.map((pair, idx) => renderPairRow('tgt', pair, idx)).join('')}
                     </div>
                 `}
@@ -767,7 +802,7 @@ function renderPairRow(side, pair, idx) {
         `;
     } else {
         return `
-            <div class="group relative p-4 rounded-xl transition-all border cursor-pointer mb-2 border-transparent hover:bg-white/80 hover:shadow-md" onclick="handleRowClick(${idx})" data-idx="${idx}" data-side="${side}">
+            <div class="group relative p-4 rounded-xl transition-all border cursor-pointer mb-2 border-transparent hover:bg-white/80 hover:shadow-md" onclick="handleRowClick(${idx},'${side}')" data-idx="${idx}" data-side="${side}">
                 <div class="prose prose-slate prose-sm max-w-none text-slate-700 leading-relaxed transition-all ${pair.isUpdating ? 'opacity-30 blur-[2px]' : ''}">${renderFormattedText(textValue)}</div>
             </div>
         `;
@@ -1266,8 +1301,12 @@ function applyCustomAutoSave() {
 document.addEventListener('DOMContentLoaded', function() {
     // 加载保存的设置
     loadSavedSettings();
-    
-    renderApp();
+
+    // 初始渲染不需要保留滚动位置
+    renderApp(false);
+
+    // 全局点击事件 - 点击空白区域退出编辑模式
+    document.addEventListener('click', handleGlobalClick);
 
     // 自动保存定时器
     setInterval(function() {
