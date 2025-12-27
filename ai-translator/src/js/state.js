@@ -126,26 +126,8 @@ function setState(updates, options = {}) {
 
     Object.assign(AppState, updates);
     if (!skipRender && typeof renderApp === 'function') {
-        // 保存滚动位置
-        let savedSourceScroll = 0, savedTargetScroll = 0;
-        if (preserveScroll) {
-            const sourceContainer = document.querySelector('section:first-of-type .overflow-y-auto');
-            const targetContainer = document.querySelector('section:last-of-type .overflow-y-auto');
-            savedSourceScroll = sourceContainer ? sourceContainer.scrollTop : 0;
-            savedTargetScroll = targetContainer ? targetContainer.scrollTop : 0;
-        }
-
-        renderApp();
-
-        // 恢复滚动位置
-        if (preserveScroll) {
-            requestAnimationFrame(() => {
-                const newSourceContainer = document.querySelector('section:first-of-type .overflow-y-auto');
-                const newTargetContainer = document.querySelector('section:last-of-type .overflow-y-auto');
-                if (newSourceContainer) newSourceContainer.scrollTop = savedSourceScroll;
-                if (newTargetContainer) newTargetContainer.scrollTop = savedTargetScroll;
-            });
-        }
+        // renderApp 现在内置滚动保护，传递 preserveScroll 参数
+        renderApp(preserveScroll);
     }
 }
 

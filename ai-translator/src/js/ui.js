@@ -104,7 +104,16 @@ function adjustAllPopups() {
 }
 
 // ============= 主渲染函数 =============
-function renderApp() {
+function renderApp(preserveScroll = true) {
+    // 保存滚动位置
+    let savedSourceScroll = 0, savedTargetScroll = 0;
+    if (preserveScroll) {
+        const sourceContainer = document.querySelector('section:first-of-type .overflow-y-auto');
+        const targetContainer = document.querySelector('section:last-of-type .overflow-y-auto');
+        savedSourceScroll = sourceContainer ? sourceContainer.scrollTop : 0;
+        savedTargetScroll = targetContainer ? targetContainer.scrollTop : 0;
+    }
+
     const root = document.getElementById('root');
     root.innerHTML = `
         <div class="min-h-screen bg-slate-50 flex flex-col p-4 md:p-6 max-w-[1600px] mx-auto w-full">
@@ -121,6 +130,16 @@ function renderApp() {
 
     // 同义词弹窗独立渲染到 body（避免被 root 内容替换影响）
     renderSynonymPopupOnly();
+
+    // 恢复滚动位置
+    if (preserveScroll) {
+        requestAnimationFrame(() => {
+            const newSourceContainer = document.querySelector('section:first-of-type .overflow-y-auto');
+            const newTargetContainer = document.querySelector('section:last-of-type .overflow-y-auto');
+            if (newSourceContainer) newSourceContainer.scrollTop = savedSourceScroll;
+            if (newTargetContainer) newTargetContainer.scrollTop = savedTargetScroll;
+        });
+    }
 
     // 渲染后调整弹窗位置
     adjustAllPopups();
@@ -1267,7 +1286,8 @@ document.addEventListener('DOMContentLoaded', function() {
     // 加载保存的设置
     loadSavedSettings();
 
-    renderApp();
+    // 初始渲染不需要保留滚动位置
+    renderApp(false);
 
     // 全局点击事件 - 点击空白区域退出编辑模式
     document.addEventListener('click', handleGlobalClick);
