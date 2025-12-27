@@ -499,6 +499,7 @@ function handleRowClick(index, clickedSide = null) {
         }
     }
 
+    // 使用 preserveScroll: false，因为我们有自己的滚动同步逻辑
     setState({
         activeIndex: index,
         editValues: {
@@ -506,7 +507,7 @@ function handleRowClick(index, clickedSide = null) {
             tgt: AppState.translationPairs[index].tgt
         },
         isEditingMode: false
-    });
+    }, { preserveScroll: false });
 
     // 滚动同步：恢复点击侧的滚动位置，并同步另一侧
     if (savedScrollInfo) {
