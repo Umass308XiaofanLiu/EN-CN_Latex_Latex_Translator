@@ -15,6 +15,12 @@ async function handleTranslate() {
 
     if (!AppState.inputText.trim()) return;
 
+    // 检查输入是否变化：如果已有翻译结果且输入未改变，则不执行翻译
+    // 用户应使用重新生成按钮来重新翻译
+    if (AppState.translationPairs.length > 0 && AppState.inputText === AppState.lastTranslatedText) {
+        return;
+    }
+
     // 保存原始输入内容（首次翻译时）
     if (!AppState.originalInputText || AppState.translationPairs.length === 0) {
         AppState.originalInputText = AppState.inputText;
@@ -43,7 +49,7 @@ async function handleTranslate() {
     try {
         const config = getApiConfig();
         const result = await translateBulk(AppState.inputText, srcLang, tgtLang, config, controller.signal);
-        
+
         if (result?.translations) {
             const pairs = result.translations.map(t => ({
                 src: t.src,
@@ -53,7 +59,7 @@ async function handleTranslate() {
                 isUpdating: false,
                 isRegenerating: false
             }));
-            setState({ translationPairs: pairs, isEditingMode: false, viewMode: 'preview' });
+            setState({ translationPairs: pairs, isEditingMode: false, viewMode: 'preview', isLoading: false });
         }
     } catch (err) {
         if (err.name !== 'AbortError') {
@@ -61,8 +67,11 @@ async function handleTranslate() {
             console.error(err);
         }
     } finally {
-        setState({ isLoading: false }, true);
+        // 确保 isLoading 状态被正确设置并触发重新渲染
         AppState.mainAbortController = null;
+        if (AppState.isLoading) {
+            setState({ isLoading: false });
+        }
     }
 }
 

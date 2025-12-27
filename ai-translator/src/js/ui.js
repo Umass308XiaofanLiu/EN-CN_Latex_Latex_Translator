@@ -62,6 +62,46 @@ function copyToClipboard(text) {
     navigator.clipboard.writeText(text);
 }
 
+// 弹窗位置自动调整函数
+function adjustPopupPosition(popupId, padding = 10) {
+    requestAnimationFrame(() => {
+        const popup = document.getElementById(popupId);
+        if (!popup) return;
+
+        const rect = popup.getBoundingClientRect();
+        const viewportWidth = window.innerWidth;
+        const viewportHeight = window.innerHeight;
+
+        // 检查右边是否超出
+        if (rect.right > viewportWidth - padding) {
+            const overflow = rect.right - viewportWidth + padding;
+            popup.style.transform = `translateX(-${overflow}px)`;
+        }
+
+        // 检查左边是否超出
+        if (rect.left < padding) {
+            popup.style.left = `${padding}px`;
+            popup.style.right = 'auto';
+        }
+
+        // 检查底部是否超出
+        if (rect.bottom > viewportHeight - padding) {
+            // 如果底部超出，尝试显示在上方
+            popup.style.top = 'auto';
+            popup.style.bottom = '100%';
+            popup.style.marginTop = '0';
+            popup.style.marginBottom = '8px';
+        }
+    });
+}
+
+// 渲染后调整所有弹窗位置
+function adjustAllPopups() {
+    ['modelMenuPopup', 'historyMenuPopup', 'saveMenuPopup', 'synonymPopup'].forEach(id => {
+        adjustPopupPosition(id);
+    });
+}
+
 // ============= 主渲染函数 =============
 function renderApp() {
     const root = document.getElementById('root');
@@ -76,9 +116,12 @@ function renderApp() {
         </div>
     `;
     attachEventListeners();
-    
+
     // 同义词弹窗独立渲染到 body（避免被 root 内容替换影响）
     renderSynonymPopupOnly();
+
+    // 渲染后调整弹窗位置
+    adjustAllPopups();
 }
 
 // ============= 错误横幅 =============
@@ -207,7 +250,7 @@ function renderSaveButtonGroup() {
                 ${Icons.Timer}
             </button>
             ${AppState.showSaveMenu ? `
-                <div class="absolute top-full right-0 mt-2 w-64 bg-white border border-slate-200 shadow-xl rounded-2xl p-3 z-[60]">
+                <div id="saveMenuPopup" class="absolute top-full right-0 mt-2 w-64 bg-white border border-slate-200 shadow-xl rounded-2xl p-3 z-[60]">
                     <div class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 px-1">Auto-Save Interval</div>
                     <div class="space-y-1">
                         ${[1, 3, 5, 10].map(min => `
@@ -237,7 +280,7 @@ function renderHistoryMenu() {
                 ${Icons.History}
             </button>
             ${AppState.showHistoryMenu ? `
-                <div class="absolute top-full right-0 mt-2 w-80 bg-white border border-slate-200 shadow-2xl rounded-2xl p-4 z-[70]">
+                <div id="historyMenuPopup" class="absolute top-full right-0 mt-2 w-80 bg-white border border-slate-200 shadow-2xl rounded-2xl p-4 z-[70]">
                     <!-- History Settings Header -->
                     <div class="mb-4 pb-3 border-b border-slate-100">
                         <div class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 flex items-center gap-2">
@@ -322,7 +365,7 @@ function renderModelSelector() {
                 <span class="transition-transform duration-200 ${AppState.showModelMenu ? 'rotate-180' : ''}">${Icons.ChevronDown}</span>
             </button>
             ${AppState.showModelMenu ? `
-                <div class="absolute top-full mt-2 left-0 w-72 bg-white border border-slate-200 shadow-2xl rounded-2xl overflow-hidden z-[60]">
+                <div id="modelMenuPopup" class="absolute top-full mt-2 left-0 w-72 bg-white border border-slate-200 shadow-2xl rounded-2xl overflow-hidden z-[60]">
                     <div class="p-2 space-y-1 bg-slate-50/50 border-b border-slate-100">
                         <div class="text-[10px] font-bold text-slate-400 px-2 py-1 uppercase">Google Cloud (Gemini)</div>
                         ${geminiModels.map(m => `
