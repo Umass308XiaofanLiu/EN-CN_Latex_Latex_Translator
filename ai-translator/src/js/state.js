@@ -24,6 +24,7 @@ const AppState = {
     geminiApiKey: "", // Gemini API Key
     openaiApiKey: "", // OpenAI API Key
     claudeApiKey: "", // Claude API Key
+    claudeProxyUrl: "", // Claude Proxy URL (Cloudflare Worker)
     localBaseUrl: "http://localhost:1234",
     localModels: [],
 
@@ -109,7 +110,8 @@ function getApiConfig() {
         localBaseUrl: AppState.localBaseUrl,
         geminiApiKey: AppState.geminiApiKey,
         openaiApiKey: AppState.openaiApiKey,
-        claudeApiKey: AppState.claudeApiKey
+        claudeApiKey: AppState.claudeApiKey,
+        claudeProxyUrl: AppState.claudeProxyUrl
     };
 }
 
