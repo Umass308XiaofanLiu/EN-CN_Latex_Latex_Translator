@@ -473,30 +473,78 @@ function handleInputChange(value) {
     // 输入时 textarea 的值已经被浏览器更新，无需重新渲染
 }
 
-function handleRowClick(index) {
+function handleRowClick(index, clickedSide = null) {
     if (AppState.activeIndex !== null && AppState.activeIndex !== index) {
         saveRowUpdate(AppState.activeIndex);
     }
     setState({
         activeIndex: index,
-        editValues: { 
-            src: AppState.translationPairs[index].src, 
-            tgt: AppState.translationPairs[index].tgt 
+        editValues: {
+            src: AppState.translationPairs[index].src,
+            tgt: AppState.translationPairs[index].tgt
         },
         isEditingMode: false
     });
+
+    // 滚动同步：将另一侧对应的句子滚动到相同位置
+    requestAnimationFrame(() => {
+        syncScrollToRow(index, clickedSide);
+    });
 }
 
-// 点击空白区域退出编辑模式
-function handleBlankAreaClick(event) {
+// 滚动同步函数
+function syncScrollToRow(index, clickedSide) {
+    // 获取源面板和目标面板的滚动容器
+    const sourceContainer = document.querySelector('section:first-of-type .overflow-y-auto');
+    const targetContainer = document.querySelector('section:last-of-type .overflow-y-auto');
+
+    if (!sourceContainer || !targetContainer) return;
+
+    // 获取两侧对应索引的行元素
+    const sourceRow = sourceContainer.querySelector(`[data-idx="${index}"]`);
+    const targetRow = targetContainer.querySelector(`[data-idx="${index}"]`);
+
+    if (!sourceRow || !targetRow) return;
+
+    // 计算点击侧的行相对于容器的位置
+    if (clickedSide === 'src') {
+        // 点击了源面板，同步目标面板
+        const sourceRowRect = sourceRow.getBoundingClientRect();
+        const sourceContainerRect = sourceContainer.getBoundingClientRect();
+        const relativeTop = sourceRowRect.top - sourceContainerRect.top;
+
+        // 将目标面板滚动到相同相对位置
+        const targetRowOffsetTop = targetRow.offsetTop;
+        targetContainer.scrollTop = targetRowOffsetTop - relativeTop;
+    } else if (clickedSide === 'tgt') {
+        // 点击了目标面板，同步源面板
+        const targetRowRect = targetRow.getBoundingClientRect();
+        const targetContainerRect = targetContainer.getBoundingClientRect();
+        const relativeTop = targetRowRect.top - targetContainerRect.top;
+
+        // 将源面板滚动到相同相对位置
+        const sourceRowOffsetTop = sourceRow.offsetTop;
+        sourceContainer.scrollTop = sourceRowOffsetTop - relativeTop;
+    }
+}
+
+// 全局点击处理 - 点击空白区域退出编辑模式
+function handleGlobalClick(event) {
     // 如果没有正在编辑的句子，直接返回
     if (AppState.activeIndex === null) return;
 
     // 检查点击的目标是否在句子行内
     const clickedRow = event.target.closest('[data-idx]');
-
-    // 如果点击了句子行或其内部元素，不处理（让行点击事件处理）
     if (clickedRow) return;
+
+    // 检查是否点击了模态框、菜单、按钮等交互元素
+    const clickedModal = event.target.closest('.fixed.inset-0'); // 模态框
+    const clickedButton = event.target.closest('button');
+    const clickedInput = event.target.closest('input, textarea, select');
+    const clickedDropdown = event.target.closest('[onclick*="toggle"], [onclick*="Menu"], [onclick*="Settings"]');
+
+    // 如果点击了这些元素，不退出编辑模式
+    if (clickedModal || clickedButton || clickedInput || clickedDropdown) return;
 
     // 点击了空白区域，保存当前编辑并退出编辑模式
     saveRowUpdate(AppState.activeIndex);
@@ -504,6 +552,11 @@ function handleBlankAreaClick(event) {
         activeIndex: null,
         editValues: { src: '', tgt: '' }
     });
+}
+
+// 向后兼容的局部处理函数
+function handleBlankAreaClick(event) {
+    handleGlobalClick(event);
 }
 
 function handleManualSave() {

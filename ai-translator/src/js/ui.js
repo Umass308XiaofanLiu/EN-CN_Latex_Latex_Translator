@@ -767,7 +767,7 @@ function renderPairRow(side, pair, idx) {
         `;
     } else {
         return `
-            <div class="group relative p-4 rounded-xl transition-all border cursor-pointer mb-2 border-transparent hover:bg-white/80 hover:shadow-md" onclick="handleRowClick(${idx})" data-idx="${idx}" data-side="${side}">
+            <div class="group relative p-4 rounded-xl transition-all border cursor-pointer mb-2 border-transparent hover:bg-white/80 hover:shadow-md" onclick="handleRowClick(${idx},'${side}')" data-idx="${idx}" data-side="${side}">
                 <div class="prose prose-slate prose-sm max-w-none text-slate-700 leading-relaxed transition-all ${pair.isUpdating ? 'opacity-30 blur-[2px]' : ''}">${renderFormattedText(textValue)}</div>
             </div>
         `;
@@ -1266,8 +1266,11 @@ function applyCustomAutoSave() {
 document.addEventListener('DOMContentLoaded', function() {
     // 加载保存的设置
     loadSavedSettings();
-    
+
     renderApp();
+
+    // 全局点击事件 - 点击空白区域退出编辑模式
+    document.addEventListener('click', handleGlobalClick);
 
     // 自动保存定时器
     setInterval(function() {
