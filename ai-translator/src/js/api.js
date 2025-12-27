@@ -1,9 +1,12 @@
 // ========================================
-// api.js - API服务（Gemini和本地LLM）
+// api.js - API服务（Gemini、OpenAI和本地LLM）
 // ========================================
 
 // Gemini API端点
 const GEMINI_API_BASE = "https://generativelanguage.googleapis.com/v1beta/models";
+
+// OpenAI API端点
+const OPENAI_API_BASE = "https://api.openai.com/v1/chat/completions";
 
 // ============= 本地LLM调用（OpenAI兼容）=============
 async function callLocalLLM(baseUrl, model, messages, jsonMode = false, signal = null) {
@@ -87,9 +90,9 @@ async function callGeminiAPI(model, contents, config = {}, apiKey = null, signal
     if (!apiKey) {
         throw new Error("Gemini API Key not configured. Please add your API key in Settings.");
     }
-    
+
     const url = `${GEMINI_API_BASE}/${model}:generateContent?key=${apiKey}`;
-    
+
     const body = {
         contents: [{ parts: [{ text: contents }] }],
         generationConfig: {
@@ -125,6 +128,43 @@ async function callGeminiAPI(model, contents, config = {}, apiKey = null, signal
     return data.candidates?.[0]?.content?.parts?.[0]?.text || "";
 }
 
+// ============= OpenAI API调用 =============
+async function callOpenAIAPI(model, messages, config = {}, apiKey = null, signal = null) {
+    if (!apiKey) {
+        throw new Error("OpenAI API Key not configured. Please add your API key in Settings.");
+    }
+
+    const body = {
+        model: model,
+        messages: messages,
+        temperature: config.temperature || 0.3,
+        max_tokens: config.max_tokens || 4096
+    };
+
+    // 如果需要JSON响应
+    if (config.jsonMode) {
+        body.response_format = { type: "json_object" };
+    }
+
+    const response = await fetch(OPENAI_API_BASE, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${apiKey}`
+        },
+        body: JSON.stringify(body),
+        signal
+    });
+
+    if (!response.ok) {
+        const errText = await response.text();
+        throw new Error(`OpenAI API Error: ${response.status} - ${errText}`);
+    }
+
+    const data = await response.json();
+    return data.choices?.[0]?.message?.content || "";
+}
+
 // ============= 批量翻译 =============
 async function translateBulk(text, srcLang, tgtLang, config, signal = null) {
     if (signal?.aborted) throw new DOMException("Aborted", "AbortError");
@@ -150,6 +190,22 @@ async function translateBulk(text, srcLang, tgtLang, config, signal = null) {
             false, // 不使用json_mode，让模型自由返回
             signal
         );
+        return parseJsonResponse(response);
+    }
+
+    // OpenAI Path
+    if (config.provider === 'openai') {
+        const response = await callOpenAIAPI(
+            config.model,
+            [
+                { role: "system", content: systemPrompt },
+                { role: "user", content: text }
+            ],
+            { jsonMode: true },
+            config.openaiApiKey,
+            signal
+        );
+        if (signal?.aborted) throw new DOMException("Aborted", "AbortError");
         return parseJsonResponse(response);
     }
 
@@ -211,6 +267,20 @@ CRITICAL RULES:
         );
     }
 
+    // OpenAI Path
+    if (config.provider === 'openai') {
+        const response = await callOpenAIAPI(
+            config.model,
+            [{ role: "user", content: prompt }],
+            { temperature: 0.3 },
+            config.openaiApiKey,
+            signal
+        );
+        if (signal?.aborted) throw new DOMException("Aborted", "AbortError");
+        return response?.trim() || text;
+    }
+
+    // Gemini Path
     const response = await callGeminiAPI(config.model, prompt, { temperature: 0.3 }, config.geminiApiKey, signal);
     if (signal?.aborted) throw new DOMException("Aborted", "AbortError");
     return response?.trim() || text;
@@ -220,8 +290,9 @@ CRITICAL RULES:
 async function getSmartUpdate(prompt, config, signal = null) {
     if (signal?.aborted) throw new DOMException("Aborted", "AbortError");
 
+    const systemPrompt = "You update translations intelligently. Return valid JSON only.";
+
     if (config.provider === 'local') {
-        const systemPrompt = "You update translations intelligently. Return valid JSON only.";
         const response = await callLocalLLM(
             config.localBaseUrl,
             config.model,
@@ -238,6 +309,26 @@ async function getSmartUpdate(prompt, config, signal = null) {
         } catch (e) { return ""; }
     }
 
+    // OpenAI Path
+    if (config.provider === 'openai') {
+        const response = await callOpenAIAPI(
+            config.model,
+            [
+                { role: "system", content: systemPrompt },
+                { role: "user", content: prompt + "\n\nRETURN JSON: {\"text\": \"...\"}" }
+            ],
+            { jsonMode: true },
+            config.openaiApiKey,
+            signal
+        );
+        if (signal?.aborted) throw new DOMException("Aborted", "AbortError");
+        try {
+            const data = parseJsonResponse(response);
+            return data.text || "";
+        } catch (e) { return ""; }
+    }
+
+    // Gemini Path
     const responseSchema = {
         type: "OBJECT",
         properties: {
@@ -288,6 +379,21 @@ Return JSON: { "alternatives": ["option1", "option2", "option3", "option4"] }`;
         } catch (e) { return []; }
     }
 
+    // OpenAI Path
+    if (config.provider === 'openai') {
+        const response = await callOpenAIAPI(
+            config.model,
+            [{ role: "user", content: prompt }],
+            { jsonMode: true },
+            config.openaiApiKey
+        );
+        try {
+            const data = parseJsonResponse(response);
+            return data.alternatives || [];
+        } catch (e) { return []; }
+    }
+
+    // Gemini Path
     const responseSchema = {
         type: "OBJECT",
         properties: {
@@ -320,6 +426,18 @@ async function summarizeText(text, config) {
         );
     }
 
+    // OpenAI Path
+    if (config.provider === 'openai') {
+        const response = await callOpenAIAPI(
+            config.model,
+            [{ role: "user", content: prompt }],
+            {},
+            config.openaiApiKey
+        );
+        return response || "";
+    }
+
+    // Gemini Path
     const response = await callGeminiAPI(config.model, prompt, {}, config.geminiApiKey);
     return response || "";
 }

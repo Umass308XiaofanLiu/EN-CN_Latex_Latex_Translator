@@ -98,8 +98,8 @@ function renderLocalSettingsModal() {
     if (!AppState.showLocalSettings) return '';
     return `
         <div class="fixed inset-0 z-[100] bg-black/20 backdrop-blur-sm flex items-center justify-center p-4">
-            <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-md overflow-hidden">
-                <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50">
+            <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-md overflow-hidden max-h-[90vh] overflow-y-auto">
+                <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50 sticky top-0 z-10">
                     <h3 class="text-sm font-bold text-slate-700 flex items-center gap-2">
                         ${Icons.Settings2} API Settings
                     </h3>
@@ -117,7 +117,7 @@ function renderLocalSettingsModal() {
                         <div class="flex items-center bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 focus-within:ring-2 focus-within:ring-indigo-100 transition-all">
                             <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/></svg>
                             <input type="password" id="geminiApiKeyInput" class="flex-grow bg-transparent border-none text-xs focus:ring-0 p-0 ml-2 text-slate-700 outline-none font-mono" value="${escapeHtml(AppState.geminiApiKey)}" placeholder="AIzaSy...">
-                            <button onclick="toggleApiKeyVisibility()" class="text-slate-400 hover:text-slate-600 ml-2" title="Toggle visibility">
+                            <button onclick="toggleApiKeyVisibility('geminiApiKeyInput')" class="text-slate-400 hover:text-slate-600 ml-2" title="Toggle visibility">
                                 ${Icons.Eye}
                             </button>
                         </div>
@@ -128,7 +128,30 @@ function renderLocalSettingsModal() {
                             ${Icons.Save} Save API Key
                         </button>
                     </div>
-                    
+
+                    <!-- OpenAI API Key Section -->
+                    <div class="pb-4 border-b border-slate-100">
+                        <div class="flex items-center gap-2 mb-3">
+                            <div class="w-6 h-6 bg-gradient-to-br from-teal-500 to-green-600 rounded-lg flex items-center justify-center">
+                                <svg class="w-3.5 h-3.5 text-white" viewBox="0 0 24 24" fill="currentColor"><path d="M22.2819 9.8211a5.9847 5.9847 0 0 0-.5157-4.9108 6.0462 6.0462 0 0 0-6.5098-2.9A6.0651 6.0651 0 0 0 4.9807 4.1818a5.9847 5.9847 0 0 0-3.9977 2.9 6.0462 6.0462 0 0 0 .7427 7.0966 5.98 5.98 0 0 0 .511 4.9107 6.051 6.051 0 0 0 6.5146 2.9001A5.9847 5.9847 0 0 0 13.2599 24a6.0557 6.0557 0 0 0 5.7718-4.2058 5.9894 5.9894 0 0 0 3.9977-2.9001 6.0557 6.0557 0 0 0-.7475-7.0729zm-9.022 12.6081a4.4755 4.4755 0 0 1-2.8764-1.0408l.1419-.0804 4.7783-2.7582a.7948.7948 0 0 0 .3927-.6813v-6.7369l2.02 1.1686a.071.071 0 0 1 .038.052v5.5826a4.504 4.504 0 0 1-4.4945 4.4944zm-9.6607-4.1254a4.4708 4.4708 0 0 1-.5346-3.0137l.142.0852 4.783 2.7582a.7712.7712 0 0 0 .7806 0l5.8428-3.3685v2.3324a.0804.0804 0 0 1-.0332.0615L9.74 19.9502a4.4992 4.4992 0 0 1-6.1408-1.6464zM2.3408 7.8956a4.485 4.485 0 0 1 2.3655-1.9728V11.6a.7664.7664 0 0 0 .3879.6765l5.8144 3.3543-2.0201 1.1685a.0757.0757 0 0 1-.071 0l-4.8303-2.7865A4.504 4.504 0 0 1 2.3408 7.8956zm16.5963 3.8558L13.1038 8.364 15.1192 7.2a.0757.0757 0 0 1 .071 0l4.8303 2.7913a4.4944 4.4944 0 0 1-.6765 8.1042v-5.6772a.79.79 0 0 0-.407-.667zm2.0107-3.0231l-.142-.0852-4.7735-2.7818a.7759.7759 0 0 0-.7854 0L9.409 9.2297V6.8974a.0662.0662 0 0 1 .0284-.0615l4.8303-2.7866a4.4992 4.4992 0 0 1 6.6802 4.66zM8.3065 12.863l-2.02-1.1638a.0804.0804 0 0 1-.038-.0567V6.0742a4.4992 4.4992 0 0 1 7.3757-3.4537l-.142.0805L8.704 5.459a.7948.7948 0 0 0-.3927.6813zm1.0976-2.3654l2.602-1.4998 2.6069 1.4998v2.9994l-2.5974 1.4997-2.6067-1.4997Z"/></svg>
+                            </div>
+                            <span class="text-xs font-bold text-slate-600 uppercase tracking-wide">OpenAI API</span>
+                        </div>
+                        <div class="flex items-center bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 focus-within:ring-2 focus-within:ring-teal-100 transition-all">
+                            <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/></svg>
+                            <input type="password" id="openaiApiKeyInput" class="flex-grow bg-transparent border-none text-xs focus:ring-0 p-0 ml-2 text-slate-700 outline-none font-mono" value="${escapeHtml(AppState.openaiApiKey)}" placeholder="sk-...">
+                            <button onclick="toggleApiKeyVisibility('openaiApiKeyInput')" class="text-slate-400 hover:text-slate-600 ml-2" title="Toggle visibility">
+                                ${Icons.Eye}
+                            </button>
+                        </div>
+                        <p class="text-[10px] text-slate-400 mt-2 px-1">
+                            Get your API key from <a href="https://platform.openai.com/api-keys" target="_blank" class="text-teal-500 hover:underline">OpenAI Platform</a>
+                        </p>
+                        <button onclick="saveOpenaiApiKey()" class="w-full mt-3 py-2.5 bg-teal-600 hover:bg-teal-700 text-white rounded-xl font-bold text-xs shadow-lg shadow-teal-200 active:scale-95 transition-all flex items-center justify-center gap-2">
+                            ${Icons.Save} Save API Key
+                        </button>
+                    </div>
+
                     <!-- Local Server Section -->
                     <div>
                         <div class="flex items-center gap-2 mb-3">
@@ -295,11 +318,23 @@ function renderModelSelector() {
         { id: 'gemini-3-pro-preview', name: 'Gemini 3 Pro', sub: 'Best Quality', iconClass: 'text-indigo-600', icon: Icons.Cpu }
     ];
 
+    const openaiModels = [
+        { id: 'gpt-5-nano', name: 'GPT-5 Nano', sub: 'Ultra Fast & Light', iconClass: 'text-teal-500', icon: Icons.Rocket },
+        { id: 'gpt-5-mini', name: 'GPT-5 Mini', sub: 'Fast & Balanced', iconClass: 'text-green-500', icon: Icons.Zap },
+        { id: 'gpt-5.2', name: 'GPT-5.2', sub: 'Best Quality', iconClass: 'text-sky-600', icon: Icons.Cpu }
+    ];
+
     let currentIcon, currentIconClass, currentLabel;
     if (AppState.apiProvider === 'local') {
         currentIcon = Icons.Server;
         currentIconClass = 'text-indigo-600';
         currentLabel = AppState.selectedModel === 'local-model' ? 'Local LLM' : (AppState.selectedModel.length > 15 ? AppState.selectedModel.slice(0, 15) + '...' : AppState.selectedModel);
+    } else if (AppState.apiProvider === 'openai') {
+        const openaiModel = openaiModels.find(m => m.id === AppState.selectedModel);
+        currentIcon = openaiModel?.icon || Icons.Cpu;
+        currentIconClass = openaiModel?.iconClass || 'text-sky-600';
+        currentLabel = AppState.selectedModel === 'gpt-5-nano' ? 'GPT-5 Nano' :
+                       AppState.selectedModel === 'gpt-5-mini' ? 'GPT-5 Mini' : 'GPT-5.2';
     } else if (AppState.selectedModel === 'gemini-2.5-flash-lite') {
         currentIcon = Icons.Rocket;
         currentIconClass = 'text-emerald-500';
@@ -322,7 +357,7 @@ function renderModelSelector() {
                 <span class="transition-transform duration-200 ${AppState.showModelMenu ? 'rotate-180' : ''}">${Icons.ChevronDown}</span>
             </button>
             ${AppState.showModelMenu ? `
-                <div class="absolute top-full mt-2 left-0 w-72 bg-white border border-slate-200 shadow-2xl rounded-2xl overflow-hidden z-[60]">
+                <div class="absolute top-full mt-2 left-0 w-72 bg-white border border-slate-200 shadow-2xl rounded-2xl overflow-hidden z-[60] max-h-[80vh] overflow-y-auto custom-scrollbar">
                     <div class="p-2 space-y-1 bg-slate-50/50 border-b border-slate-100">
                         <div class="text-[10px] font-bold text-slate-400 px-2 py-1 uppercase">Google Cloud (Gemini)</div>
                         ${geminiModels.map(m => `
@@ -335,9 +370,24 @@ function renderModelSelector() {
                             </button>
                         `).join('')}
                     </div>
+                    <div class="p-2 space-y-1 bg-sky-50/50 border-b border-slate-100">
+                        <div class="text-[10px] font-bold text-slate-400 px-2 py-1 uppercase flex items-center gap-2">
+                            <svg class="w-3 h-3" viewBox="0 0 24 24" fill="currentColor"><path d="M22.2819 9.8211a5.9847 5.9847 0 0 0-.5157-4.9108 6.0462 6.0462 0 0 0-6.5098-2.9A6.0651 6.0651 0 0 0 4.9807 4.1818a5.9847 5.9847 0 0 0-3.9977 2.9 6.0462 6.0462 0 0 0 .7427 7.0966 5.98 5.98 0 0 0 .511 4.9107 6.051 6.051 0 0 0 6.5146 2.9001A5.9847 5.9847 0 0 0 13.2599 24a6.0557 6.0557 0 0 0 5.7718-4.2058 5.9894 5.9894 0 0 0 3.9977-2.9001 6.0557 6.0557 0 0 0-.7475-7.0729zm-9.022 12.6081a4.4755 4.4755 0 0 1-2.8764-1.0408l.1419-.0804 4.7783-2.7582a.7948.7948 0 0 0 .3927-.6813v-6.7369l2.02 1.1686a.071.071 0 0 1 .038.052v5.5826a4.504 4.504 0 0 1-4.4945 4.4944zm-9.6607-4.1254a4.4708 4.4708 0 0 1-.5346-3.0137l.142.0852 4.783 2.7582a.7712.7712 0 0 0 .7806 0l5.8428-3.3685v2.3324a.0804.0804 0 0 1-.0332.0615L9.74 19.9502a4.4992 4.4992 0 0 1-6.1408-1.6464zM2.3408 7.8956a4.485 4.485 0 0 1 2.3655-1.9728V11.6a.7664.7664 0 0 0 .3879.6765l5.8144 3.3543-2.0201 1.1685a.0757.0757 0 0 1-.071 0l-4.8303-2.7865A4.504 4.504 0 0 1 2.3408 7.8956zm16.5963 3.8558L13.1038 8.364 15.1192 7.2a.0757.0757 0 0 1 .071 0l4.8303 2.7913a4.4944 4.4944 0 0 1-.6765 8.1042v-5.6772a.79.79 0 0 0-.407-.667zm2.0107-3.0231l-.142-.0852-4.7735-2.7818a.7759.7759 0 0 0-.7854 0L9.409 9.2297V6.8974a.0662.0662 0 0 1 .0284-.0615l4.8303-2.7866a4.4992 4.4992 0 0 1 6.6802 4.66zM8.3065 12.863l-2.02-1.1638a.0804.0804 0 0 1-.038-.0567V6.0742a4.4992 4.4992 0 0 1 7.3757-3.4537l-.142.0805L8.704 5.459a.7948.7948 0 0 0-.3927.6813zm1.0976-2.3654l2.602-1.4998 2.6069 1.4998v2.9994l-2.5974 1.4997-2.6067-1.4997Z"/></svg>
+                            OpenAI
+                        </div>
+                        ${openaiModels.map(m => `
+                            <button onclick="selectModel('openai','${m.id}')" class="w-full flex items-center justify-between p-2.5 rounded-xl transition-all ${AppState.apiProvider === 'openai' && AppState.selectedModel === m.id ? 'bg-sky-50 text-sky-700 ring-1 ring-sky-200' : 'hover:bg-white hover:shadow-sm text-slate-600'}">
+                                <div class="flex flex-col items-start">
+                                    <span class="text-xs font-bold uppercase tracking-wide">${m.name}</span>
+                                    <span class="text-[9px] opacity-70">${m.sub}</span>
+                                </div>
+                                <span class="${m.iconClass}">${m.icon}</span>
+                            </button>
+                        `).join('')}
+                    </div>
                     <div class="p-2 bg-white">
                         <div class="text-[10px] font-bold text-slate-400 px-2 py-1 uppercase flex items-center justify-between">
-                            <span>Local / OpenAI</span>
+                            <span>Local LM Studio</span>
                             ${Icons.Server}
                         </div>
                         ${AppState.localModels.length > 0 ? `
@@ -781,10 +831,22 @@ function saveGeminiApiKey() {
     }
 }
 
-function toggleApiKeyVisibility() {
-    const input = document.getElementById('geminiApiKeyInput');
+function toggleApiKeyVisibility(inputId) {
+    const input = document.getElementById(inputId || 'geminiApiKeyInput');
     if (input) {
         input.type = input.type === 'password' ? 'text' : 'password';
+    }
+}
+
+function saveOpenaiApiKey() {
+    const input = document.getElementById('openaiApiKeyInput');
+    if (input) {
+        AppState.openaiApiKey = input.value.trim();
+        // 保存到localStorage
+        try {
+            localStorage.setItem('openaiApiKey', AppState.openaiApiKey);
+        } catch (e) {}
+        setState({ showLocalSettings: false });
     }
 }
 
@@ -991,7 +1053,13 @@ function loadSavedSettings() {
         if (savedKey) {
             AppState.geminiApiKey = savedKey;
         }
-        
+
+        // 加载 OpenAI API Key
+        const savedOpenaiKey = localStorage.getItem('openaiApiKey');
+        if (savedOpenaiKey) {
+            AppState.openaiApiKey = savedOpenaiKey;
+        }
+
         // 加载 Local Base URL
         const savedLocalUrl = localStorage.getItem('localBaseUrl');
         if (savedLocalUrl) {

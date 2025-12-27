@@ -19,9 +19,10 @@ const AppState = {
     error: null,
 
     // API配置
-    apiProvider: 'gemini', // 'gemini' | 'local'
+    apiProvider: 'gemini', // 'gemini' | 'openai' | 'local'
     selectedModel: "gemini-2.5-flash-lite",
     geminiApiKey: "", // Gemini API Key
+    openaiApiKey: "", // OpenAI API Key
     localBaseUrl: "http://localhost:1234",
     localModels: [],
 
@@ -91,7 +92,8 @@ function getApiConfig() {
         provider: AppState.apiProvider,
         model: AppState.selectedModel,
         localBaseUrl: AppState.localBaseUrl,
-        geminiApiKey: AppState.geminiApiKey
+        geminiApiKey: AppState.geminiApiKey,
+        openaiApiKey: AppState.openaiApiKey
     };
 }
 
