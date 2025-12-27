@@ -186,7 +186,10 @@ function renderHeader() {
                     <span class="text-indigo-500 group-hover:animate-pulse">${Icons.Sparkles}</span> Insight
                 </button>
                 <button onclick="handleTranslate()" ${!AppState.inputText && !AppState.isLoading ? 'disabled' : ''} class="px-10 py-2.5 rounded-2xl font-black text-sm tracking-wider transition-all shadow-xl active:scale-95 flex items-center gap-2 ${!AppState.inputText && !AppState.isLoading ? 'bg-slate-200 text-slate-400 cursor-not-allowed' : AppState.isLoading ? 'bg-rose-500 text-white hover:bg-rose-600 shadow-rose-200' : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-indigo-200'}">
-                    ${AppState.isLoading ? `<span class="animate-pulse">${Icons.StopCircle}</span> STOP` : AppState.isLoading ? Icons.Loader2 : 'TRANSLATE'}
+                    ${AppState.isLoading ? `<span class="animate-pulse">${Icons.StopCircle}</span> STOP` : 'TRANSLATE'}
+                </button>
+                <button onclick="handleRegenerateAll()" ${AppState.translationPairs.length === 0 ? 'disabled' : ''} class="p-2.5 rounded-2xl transition-all shadow-xl active:scale-95 flex items-center justify-center ${AppState.translationPairs.length === 0 ? 'bg-slate-200 text-slate-400 cursor-not-allowed' : AppState.isRegeneratingAll ? 'bg-rose-500 text-white hover:bg-rose-600 shadow-rose-200' : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-indigo-200'}" title="重新生成所有翻译">
+                    ${AppState.isRegeneratingAll ? `<span class="animate-pulse">${Icons.StopCircle}</span>` : Icons.RefreshCw}
                 </button>
             </div>
         </header>
@@ -401,17 +404,32 @@ function renderSourcePanel() {
                         <button onclick="copySourceText()" class="p-2 text-slate-400 hover:text-indigo-600 transition-colors" title="Copy Source Text">
                             ${Icons.Copy}
                         </button>
-                        <button onclick="toggleEditMode()" class="px-3 py-1.5 text-slate-600 hover:bg-indigo-50 hover:text-indigo-700 rounded-xl transition-all text-xs font-bold flex items-center gap-2">
-                            ${AppState.isEditingMode ? `${Icons.Eye} Preview Mode` : `${Icons.PenLine} Text Edit`}
-                        </button>
+                        <div class="flex items-center bg-slate-100 rounded-xl p-0.5 border border-slate-200">
+                            <button onclick="setViewMode('edit')" class="px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${AppState.viewMode === 'edit' ? 'bg-white text-indigo-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'}">
+                                ${Icons.PenLine} Edit
+                            </button>
+                            <button onclick="setViewMode('preview')" class="px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${AppState.viewMode === 'preview' ? 'bg-white text-indigo-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'}">
+                                ${Icons.Eye} Preview
+                            </button>
+                            <button onclick="setViewMode('original')" class="px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${AppState.viewMode === 'original' ? 'bg-white text-indigo-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'}" title="显示原始输入内容">
+                                ${Icons.History} Original
+                            </button>
+                        </div>
                     ` : ''}
                     <button onclick="handleClear()" class="text-slate-400 hover:text-rose-500 p-2 transition-colors">${Icons.Trash2}</button>
                 </div>
             </div>
             <div class="flex-grow flex flex-col overflow-hidden bg-slate-50/20">
-                ${AppState.translationPairs.length > 0 && !AppState.isEditingMode ? `
+                ${AppState.translationPairs.length > 0 && AppState.viewMode === 'preview' ? `
                     <div class="overflow-y-auto h-full custom-scrollbar p-4 space-y-2">
                         ${AppState.translationPairs.map((pair, idx) => renderPairRow('src', pair, idx)).join('')}
+                    </div>
+                ` : AppState.translationPairs.length > 0 && AppState.viewMode === 'original' ? `
+                    <div class="w-full h-full p-10 overflow-y-auto custom-scrollbar">
+                        <div class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 flex items-center gap-2">
+                            ${Icons.History} 原始输入内容 (用于重新生成翻译)
+                        </div>
+                        <pre class="text-base text-slate-700 whitespace-pre-wrap font-medium leading-relaxed">${escapeHtml(AppState.originalInputText || AppState.inputText)}</pre>
                     </div>
                 ` : `
                     <textarea id="mainInput" class="w-full h-full p-10 text-xl border-none focus:ring-0 placeholder-slate-300 resize-none leading-relaxed custom-scrollbar bg-transparent focus:outline-none font-medium text-slate-700 selection:bg-indigo-100" placeholder="Paste or type academic text here...">${escapeHtml(AppState.inputText)}</textarea>
@@ -490,10 +508,12 @@ function renderPairRow(side, pair, idx) {
                     ${renderHistoryControls(pair, idx)}
                 </div>
                 <div class="relative flex flex-col gap-3">
-                    <div class="absolute -top-10 right-0 z-40">
-                        <button onclick="event.stopPropagation();triggerSaveRowUpdate(${idx});" class="flex items-center gap-2 px-3 py-1.5 rounded-lg text-white text-xs font-bold shadow-lg transition-all ${pair.isUpdating ? 'bg-rose-500 hover:bg-rose-600' : 'bg-indigo-600 hover:bg-indigo-700'}" title="${pair.isUpdating ? 'Stop AI Update' : 'Save & Update'}">
-                            ${pair.isUpdating ? `<span class="animate-pulse">${Icons.Octagon}</span>` : Icons.RefreshCw}
-                            ${pair.isUpdating ? 'Stop' : 'Update'}
+                    <div class="absolute -top-10 right-0 z-40 flex items-center gap-2">
+                        <button onclick="event.stopPropagation();triggerSaveRowUpdate(${idx});" class="flex items-center gap-2 px-3 py-1.5 rounded-lg text-white text-xs font-bold shadow-lg transition-all ${pair.isUpdating ? 'bg-rose-500 hover:bg-rose-600' : 'bg-indigo-600 hover:bg-indigo-700'}" title="${pair.isUpdating ? '停止 AI 更新' : '保存并更新'}">
+                            ${pair.isUpdating ? `<span class="animate-pulse">${Icons.StopCircle}</span> Stop` : `${Icons.PenLineSmall} Update`}
+                        </button>
+                        <button onclick="event.stopPropagation();handleRegenerateTranslation(${idx});" class="flex items-center justify-center p-1.5 rounded-lg text-white shadow-lg transition-all ${pair.isRegenerating ? 'bg-rose-500 hover:bg-rose-600' : 'bg-indigo-600 hover:bg-indigo-700'}" title="${pair.isRegenerating ? '停止重新生成' : '重新生成此翻译'}">
+                            ${pair.isRegenerating ? `<span class="animate-pulse">${Icons.StopCircle}</span>` : Icons.RefreshCw}
                         </button>
                     </div>
                     <textarea id="editTextarea_${side}_${idx}" class="w-full bg-transparent border-none focus:ring-0 p-0 text-slate-800 leading-relaxed resize-none overflow-hidden min-h-[40px]" placeholder="Edit ${side === 'src' ? 'source' : 'target'}..." onclick="event.stopPropagation();">${escapeHtml(editValue)}</textarea>
@@ -531,21 +551,12 @@ function renderHistoryControls(pair, idx) {
 function renderAiToolbar(side, idx) {
     const isGrammarSettingsOpen = AppState.activeSettingsPopup === 'grammar' && AppState.activeSettingsIndex === idx && AppState.activeSettingsSide === side;
     const isSimplifySettingsOpen = AppState.activeSettingsPopup === 'simplify' && AppState.activeSettingsIndex === idx && AppState.activeSettingsSide === side;
-    const pair = AppState.translationPairs[idx];
-    const isRegenerating = pair?.isRegenerating || false;
 
     return `
         <div class="mt-2 pt-2 border-t border-indigo-50 flex flex-wrap items-center gap-2 relative" onclick="event.stopPropagation();">
             <div class="text-[10px] font-bold text-indigo-400 uppercase tracking-wider mr-1 flex items-center gap-1 select-none">
                 ${Icons.SparklesSmall} ${side === 'src' ? 'Source AI' : 'Target AI'}
             </div>
-
-            <!-- Regenerate Translation Button (只在目标端显示) -->
-            ${side === 'tgt' ? `
-                <button onclick="handleRegenerateTranslation(${idx})" ${isRegenerating ? '' : ''} class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs transition-all ${isRegenerating ? 'bg-rose-100 border border-rose-200 text-rose-600 hover:bg-rose-200' : 'bg-amber-50 border border-amber-200 text-amber-700 hover:bg-amber-100'}" title="${isRegenerating ? '停止重新生成' : '重新生成翻译'}">
-                    ${isRegenerating ? `<span class="animate-spin">${Icons.RefreshCw}</span> Stop` : `${Icons.RefreshCw} Regenerate`}
-                </button>
-            ` : ''}
 
             <!-- Grammar Button Group -->
             <div class="flex items-stretch rounded-lg bg-indigo-50 border border-indigo-100 relative">
@@ -858,6 +869,12 @@ function setLanguage(src, tgt) {
     AppState.sourceLang = src;
     AppState.targetLang = tgt;
     AppState.isAutoDetect = false;
+    renderApp();
+}
+
+function setViewMode(mode) {
+    AppState.viewMode = mode;
+    AppState.isEditingMode = (mode === 'edit');
     renderApp();
 }
 
