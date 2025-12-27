@@ -369,7 +369,15 @@ async function fetchLocalModels(baseUrl) {
 
 // 解析JSON响应（处理可能的markdown包裹）
 function parseJsonResponse(text) {
+    // 检查空响应
+    if (!text || text.trim() === '') {
+        console.error('parseJsonResponse: Empty response received');
+        throw new Error('无法解析 JSON 响应: 收到空响应');
+    }
+
     let clean = text.trim();
+
+    // 移除 markdown 代码块
     if (clean.startsWith('```json')) clean = clean.slice(7);
     else if (clean.startsWith('```')) clean = clean.slice(3);
     if (clean.endsWith('```')) clean = clean.slice(0, -3);
@@ -383,6 +391,15 @@ function parseJsonResponse(text) {
         if (match) {
             try { return JSON.parse(match[0]); } catch (e2) {}
         }
+        // 尝试提取JSON数组
+        const arrayMatch = clean.match(/\[[\s\S]*\]/);
+        if (arrayMatch) {
+            try {
+                const arr = JSON.parse(arrayMatch[0]);
+                return { translations: arr };
+            } catch (e3) {}
+        }
+        console.error('parseJsonResponse failed. Raw response:', text.substring(0, 500));
         throw new Error('无法解析 JSON 响应');
     }
 }
