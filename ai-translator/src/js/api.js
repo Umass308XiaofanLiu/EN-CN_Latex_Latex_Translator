@@ -224,9 +224,13 @@ function getMaxTokensForClaudeModel(model, configMax) {
     return 8192;
 }
 
-async function callClaudeAPI(model, messages, config = {}, apiKey = null, signal = null) {
+async function callClaudeAPI(model, messages, config = {}, apiKey = null, signal = null, proxyUrl = null) {
     if (!apiKey) {
         throw new Error("Claude API Key not configured. Please add your API key in Settings.");
+    }
+
+    if (!proxyUrl) {
+        throw new Error("Claude Proxy URL not configured. Please add your Cloudflare Worker proxy URL in Settings.");
     }
 
     // 提取 system message（Claude 使用单独的 system 参数）
@@ -262,7 +266,10 @@ async function callClaudeAPI(model, messages, config = {}, apiKey = null, signal
         body.temperature = 0.3;
     }
 
-    const response = await fetch(CLAUDE_API_BASE, {
+    // 使用代理 URL 而不是直接调用 Claude API
+    const endpoint = proxyUrl.replace(/\/$/, "");
+
+    const response = await fetch(endpoint, {
         method: "POST",
         headers: {
             "Content-Type": "application/json",
@@ -337,7 +344,8 @@ async function translateBulk(text, srcLang, tgtLang, config, signal = null) {
             ],
             { temperature: 0.3 },
             config.claudeApiKey,
-            signal
+            signal,
+            config.claudeProxyUrl
         );
         if (signal?.aborted) throw new DOMException("Aborted", "AbortError");
         return parseJsonResponse(response);
@@ -421,7 +429,8 @@ CRITICAL RULES:
             [{ role: "user", content: prompt }],
             { temperature: 0.3 },
             config.claudeApiKey,
-            signal
+            signal,
+            config.claudeProxyUrl
         );
         if (signal?.aborted) throw new DOMException("Aborted", "AbortError");
         return response?.trim() || text;
@@ -485,7 +494,8 @@ async function getSmartUpdate(prompt, config, signal = null) {
             ],
             { temperature: 0.3 },
             config.claudeApiKey,
-            signal
+            signal,
+            config.claudeProxyUrl
         );
         if (signal?.aborted) throw new DOMException("Aborted", "AbortError");
         try {
@@ -565,7 +575,9 @@ Return JSON: { "alternatives": ["option1", "option2", "option3", "option4"] }`;
             config.model,
             [{ role: "user", content: prompt }],
             { temperature: 0.3 },
-            config.claudeApiKey
+            config.claudeApiKey,
+            null,
+            config.claudeProxyUrl
         );
         try {
             const data = parseJsonResponse(response);
@@ -623,7 +635,9 @@ async function summarizeText(text, config) {
             config.model,
             [{ role: "user", content: prompt }],
             {},
-            config.claudeApiKey
+            config.claudeApiKey,
+            null,
+            config.claudeProxyUrl
         );
         return response || "";
     }

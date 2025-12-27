@@ -270,8 +270,21 @@ function renderSettingsModal() {
                         <p class="text-[10px] text-slate-400 mt-2 px-1">
                             Get your API key from <a href="https://console.anthropic.com/settings/keys" target="_blank" class="text-orange-500 hover:underline">Anthropic Console</a>
                         </p>
-                        <button onclick="saveClaudeApiKey()" class="w-full mt-3 py-2.5 bg-orange-600 hover:bg-orange-700 text-white rounded-xl font-bold text-xs shadow-lg shadow-orange-200 active:scale-95 transition-all flex items-center justify-center gap-2">
-                            ${Icons.Save} Save API Key
+
+                        <!-- Claude Proxy URL -->
+                        <div class="mt-4 mb-3">
+                            <label class="text-[10px] font-semibold text-slate-500 uppercase tracking-wide mb-2 block">Proxy URL (Required for CORS)</label>
+                            <div class="flex items-center bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 focus-within:ring-2 focus-within:ring-orange-100 transition-all">
+                                ${Icons.Globe}
+                                <input type="text" id="claudeProxyUrlInput" class="flex-grow bg-transparent border-none text-xs focus:ring-0 p-0 ml-2 text-slate-700 outline-none font-mono" value="${escapeHtml(AppState.claudeProxyUrl)}" placeholder="https://your-worker.workers.dev">
+                            </div>
+                            <p class="text-[10px] text-slate-400 mt-1 px-1">
+                                Claude API requires a CORS proxy. Use <a href="https://developers.cloudflare.com/workers/" target="_blank" class="text-orange-500 hover:underline">Cloudflare Workers</a> to create one.
+                            </p>
+                        </div>
+
+                        <button onclick="saveClaudeSettings()" class="w-full mt-3 py-2.5 bg-orange-600 hover:bg-orange-700 text-white rounded-xl font-bold text-xs shadow-lg shadow-orange-200 active:scale-95 transition-all flex items-center justify-center gap-2">
+                            ${Icons.Save} Save Claude Settings
                         </button>
                     </div>
 
@@ -1031,16 +1044,24 @@ function saveOpenaiApiKey() {
     }
 }
 
-function saveClaudeApiKey() {
-    const input = document.getElementById('claudeApiKeyInput');
-    if (input) {
-        AppState.claudeApiKey = input.value.trim();
-        // 保存到localStorage
-        try {
-            localStorage.setItem('claudeApiKey', AppState.claudeApiKey);
-        } catch (e) {}
-        setState({ showLocalSettings: false });
+function saveClaudeSettings() {
+    const apiKeyInput = document.getElementById('claudeApiKeyInput');
+    const proxyUrlInput = document.getElementById('claudeProxyUrlInput');
+
+    if (apiKeyInput) {
+        AppState.claudeApiKey = apiKeyInput.value.trim();
     }
+    if (proxyUrlInput) {
+        AppState.claudeProxyUrl = proxyUrlInput.value.trim();
+    }
+
+    // 保存到localStorage
+    try {
+        localStorage.setItem('claudeApiKey', AppState.claudeApiKey);
+        localStorage.setItem('claudeProxyUrl', AppState.claudeProxyUrl);
+    } catch (e) {}
+
+    setState({ showSettings: false });
 }
 
 function toggleSaveMenu() {
@@ -1277,6 +1298,12 @@ function loadSavedSettings() {
         const savedClaudeKey = localStorage.getItem('claudeApiKey');
         if (savedClaudeKey) {
             AppState.claudeApiKey = savedClaudeKey;
+        }
+
+        // 加载 Claude Proxy URL
+        const savedClaudeProxyUrl = localStorage.getItem('claudeProxyUrl');
+        if (savedClaudeProxyUrl) {
+            AppState.claudeProxyUrl = savedClaudeProxyUrl;
         }
 
         // 加载 Local Base URL
