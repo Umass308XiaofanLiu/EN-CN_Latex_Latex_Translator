@@ -487,6 +487,25 @@ function handleRowClick(index) {
     });
 }
 
+// 点击空白区域退出编辑模式
+function handleBlankAreaClick(event) {
+    // 如果没有正在编辑的句子，直接返回
+    if (AppState.activeIndex === null) return;
+
+    // 检查点击的目标是否在句子行内
+    const clickedRow = event.target.closest('[data-idx]');
+
+    // 如果点击了句子行或其内部元素，不处理（让行点击事件处理）
+    if (clickedRow) return;
+
+    // 点击了空白区域，保存当前编辑并退出编辑模式
+    saveRowUpdate(AppState.activeIndex);
+    setState({
+        activeIndex: null,
+        editValues: { src: '', tgt: '' }
+    });
+}
+
 function handleManualSave() {
     if (AppState.translationPairs.length > 0) {
         addToGlobalHistory(AppState.translationPairs, AppState.sessionId);

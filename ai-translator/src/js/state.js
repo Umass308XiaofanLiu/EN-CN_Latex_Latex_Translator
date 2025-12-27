@@ -261,7 +261,18 @@ function renderFormattedText(text) {
         });
     };
     
-    pushPlaceholder(/\\begin\{([\w\*]+)\}([\s\S]*?)\\end\{\1\}/g, 'display', (match) => match);
+    pushPlaceholder(/\\begin\{([\w\*]+)\}([\s\S]*?)\\end\{\1\}/g, 'display', (match, env, body) => {
+        // 将带编号的环境转换为不带编号的版本
+        const envMap = {
+            'equation': 'equation*',
+            'align': 'align*',
+            'gather': 'gather*',
+            'multline': 'multline*',
+            'eqnarray': 'eqnarray*'
+        };
+        const noNumberEnv = envMap[env] || env;
+        return `\\begin{${noNumberEnv}}${body}\\end{${noNumberEnv}}`;
+    });
     pushPlaceholder(/\\\[([\s\S]*?)\\\]/g, 'display', (match, p1) => p1);
     pushPlaceholder(/\$\$([\s\S]*?)\$\$/g, 'display', (match, p1) => p1);
     pushPlaceholder(/\\\(([\s\S]*?)\\\)/g, 'inline', (match, p1) => p1);

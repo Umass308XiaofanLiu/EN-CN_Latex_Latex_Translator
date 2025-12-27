@@ -665,7 +665,7 @@ function renderSourcePanel() {
             </div>
             <div class="flex-grow flex flex-col overflow-hidden bg-slate-50/20">
                 ${AppState.translationPairs.length > 0 && AppState.viewMode === 'preview' ? `
-                    <div class="overflow-y-auto h-full custom-scrollbar p-4 space-y-2">
+                    <div class="overflow-y-auto h-full custom-scrollbar p-4 space-y-2" onclick="handleBlankAreaClick(event)">
                         ${AppState.translationPairs.map((pair, idx) => renderPairRow('src', pair, idx)).join('')}
                     </div>
                 ` : AppState.translationPairs.length > 0 && AppState.viewMode === 'original' ? `
@@ -691,7 +691,7 @@ function renderTargetPanel() {
                 <h3 class="text-xs font-black text-slate-400 uppercase tracking-[0.2em]">Target Panel</h3>
                 <button onclick="copyTargetText()" class="p-2 text-slate-400 hover:text-indigo-600 transition-colors">${Icons.Copy}</button>
             </div>
-            <div class="flex-grow p-4 overflow-y-auto custom-scrollbar bg-slate-50/20">
+            <div class="flex-grow p-4 overflow-y-auto custom-scrollbar bg-slate-50/20" onclick="handleBlankAreaClick(event)">
                 ${AppState.isLoading && AppState.translationPairs.length === 0 ? `
                     <div class="h-full flex flex-col items-center justify-center text-slate-400 animate-pulse">
                         <span class="text-indigo-300 mb-6">${Icons.LoaderLarge}</span>
@@ -703,7 +703,7 @@ function renderTargetPanel() {
                         <p class="text-xl font-black uppercase tracking-widest">Awaiting Input</p>
                     </div>
                 ` : `
-                    <div class="space-y-2 pb-24">
+                    <div class="space-y-2 pb-24" onclick="handleBlankAreaClick(event)">
                         ${AppState.translationPairs.map((pair, idx) => renderPairRow('tgt', pair, idx)).join('')}
                     </div>
                 `}
