@@ -1597,7 +1597,7 @@ function renderErrorBanner() {
 function renderSettingsModal() {
     if (!AppState.showSettings) return '';
 
-    const allModels = [
+    const onlineModels = [
         { id: 'gemini-2.5-flash-lite', name: 'Gemini 2.5 Flash Lite', provider: 'gemini', iconClass: 'text-emerald-500' },
         { id: 'gemini-3-flash-preview', name: 'Gemini 3 Flash', provider: 'gemini', iconClass: 'text-orange-500' },
         { id: 'gemini-3-pro-preview', name: 'Gemini 3 Pro', provider: 'gemini', iconClass: 'text-indigo-600' },
@@ -1616,23 +1616,46 @@ function renderSettingsModal() {
                     <button onclick="closeSettings()" class="text-slate-400 hover:text-slate-600">${Icons.X}</button>
                 </div>
                 <div class="p-6 space-y-6">
-                    <!-- Model Visibility Section -->
+                    <!-- Online Model Visibility Section -->
                     <div class="pb-5 border-b border-slate-100">
                         <div class="flex items-center gap-2 mb-4">
                             <div class="w-6 h-6 bg-gradient-to-br from-violet-500 to-purple-600 rounded-lg flex items-center justify-center text-white">
-                                ${Icons.Eye}
+                                ${Icons.Globe}
                             </div>
-                            <span class="text-xs font-bold text-slate-600 uppercase tracking-wide">Model Visibility</span>
+                            <span class="text-xs font-bold text-slate-600 uppercase tracking-wide">Online Models Visibility</span>
                         </div>
-                        <p class="text-[10px] text-slate-400 mb-3">Select which models to show in the model selector.</p>
+                        <p class="text-[10px] text-slate-400 mb-3">Select which online models to show in the model selector.</p>
                         <div class="grid grid-cols-2 gap-2">
-                            ${allModels.map(m => `
-                                <label class="flex items-center gap-2 p-2 rounded-lg hover:bg-slate-50 cursor-pointer transition-all ${AppState.modelVisibility[m.id] ? 'bg-indigo-50' : ''}">
-                                    <input type="checkbox" ${AppState.modelVisibility[m.id] ? 'checked' : ''} onchange="toggleModelVisibility('${m.id}')" class="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500">
+                            ${onlineModels.map(m => `
+                                <label class="flex items-center gap-2 p-2 rounded-lg hover:bg-slate-50 cursor-pointer transition-all ${AppState.modelVisibility[m.id] !== false ? 'bg-indigo-50' : ''}">
+                                    <input type="checkbox" ${AppState.modelVisibility[m.id] !== false ? 'checked' : ''} onchange="toggleModelVisibility('${m.id}')" class="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500">
                                     <span class="text-xs font-medium ${m.iconClass}">${m.name}</span>
                                 </label>
                             `).join('')}
                         </div>
+                    </div>
+
+                    <!-- Local Model Visibility Section -->
+                    <div class="pb-5 border-b border-slate-100">
+                        <div class="flex items-center gap-2 mb-4">
+                            <div class="w-6 h-6 bg-gradient-to-br from-purple-500 to-violet-600 rounded-lg flex items-center justify-center text-white">
+                                ${Icons.Server}
+                            </div>
+                            <span class="text-xs font-bold text-slate-600 uppercase tracking-wide">Local Models Visibility</span>
+                        </div>
+                        ${AppState.localModels.length > 0 ? `
+                            <p class="text-[10px] text-slate-400 mb-3">Select which local models to show in the model selector.</p>
+                            <div class="space-y-1 max-h-40 overflow-y-auto custom-scrollbar">
+                                ${AppState.localModels.map(lm => `
+                                    <label class="flex items-center gap-2 p-2 rounded-lg hover:bg-slate-50 cursor-pointer transition-all ${AppState.modelVisibility[lm.id] !== false ? 'bg-purple-50' : ''}">
+                                        <input type="checkbox" ${AppState.modelVisibility[lm.id] !== false ? 'checked' : ''} onchange="toggleModelVisibility('${escapeHtml(lm.id)}')" class="w-4 h-4 rounded border-slate-300 text-purple-600 focus:ring-purple-500">
+                                        <span class="text-xs font-medium text-purple-600 truncate">${escapeHtml(lm.id)}</span>
+                                    </label>
+                                `).join('')}
+                            </div>
+                        ` : `
+                            <p class="text-[10px] text-slate-400 italic">No local models available. Connect to LM Studio first.</p>
+                        `}
                     </div>
 
                     <!-- Gemini API Key Section -->
@@ -1735,6 +1758,7 @@ function renderHeader() {
             </div>
 
             <div class="flex items-center gap-4">
+                ${renderSettingsButton()}
                 ${renderSaveButtonGroup()}
                 ${renderHistoryMenu()}
                 <div class="h-6 w-px bg-slate-200 mx-2"></div>
@@ -1757,14 +1781,22 @@ function renderHeader() {
     `;
 }
 
+// ============= 设置按钮 =============
+function renderSettingsButton() {
+    return `
+        <div class="relative">
+            <button onclick="openSettings()" class="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-full transition-all" title="Settings">
+                ${Icons.SettingsGear}
+            </button>
+        </div>
+    `;
+}
+
 // ============= 保存按钮组 =============
 function renderSaveButtonGroup() {
     return `
         <div class="relative flex items-center bg-slate-100 rounded-full border border-slate-200">
-            <button onclick="openSettings()" class="pl-3 pr-2 py-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-l-full transition-all border-r border-slate-200" title="Settings">
-                ${Icons.SettingsGear}
-            </button>
-            <button onclick="handleManualSave()" ${AppState.translationPairs.length === 0 ? 'disabled' : ''} class="px-2 py-2 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 transition-all disabled:opacity-30 flex items-center gap-1 border-r border-slate-200" title="Manual Save Session">
+            <button onclick="handleManualSave()" ${AppState.translationPairs.length === 0 ? 'disabled' : ''} class="pl-3 pr-2 py-2 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-l-full transition-all disabled:opacity-30 flex items-center gap-1 border-r border-slate-200" title="Manual Save Session">
                 ${Icons.Save}
             </button>
             <button onclick="toggleSaveMenu()" class="pl-1 pr-2 py-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-r-full transition-all" title="Auto-Save Settings">
@@ -1935,20 +1967,25 @@ function renderModelSelector() {
                             <span>Local LM Studio</span>
                             ${Icons.Server}
                         </div>
-                        ${AppState.localModels.length > 0 ? `
-                            <div class="max-h-40 overflow-y-auto custom-scrollbar my-1">
-                                ${AppState.localModels.map(lm => `
-                                    <button onclick="selectModel('local','${escapeHtml(lm.id)}')" class="w-full flex items-center justify-between p-2 rounded-xl transition-all mb-1 ${AppState.apiProvider === 'local' && AppState.selectedModel === lm.id ? 'bg-indigo-50 text-indigo-700 ring-1 ring-indigo-200' : 'hover:bg-slate-50 text-slate-600'}">
-                                        <div class="flex flex-col items-start w-full overflow-hidden">
-                                            <span class="text-xs font-bold truncate w-full text-left">${escapeHtml(lm.id)}</span>
-                                        </div>
-                                        ${AppState.apiProvider === 'local' && AppState.selectedModel === lm.id ? '<div class="w-1.5 h-1.5 rounded-full bg-indigo-600 ml-2 shrink-0"></div>' : ''}
-                                    </button>
-                                `).join('')}
-                            </div>
-                        ` : `
-                            <div class="text-[10px] text-slate-400 italic text-center py-2 bg-slate-50 rounded-lg mb-2">No models fetched yet.</div>
-                        `}
+                        ${(() => {
+                            const visibleLocalModels = AppState.localModels.filter(lm => AppState.modelVisibility[lm.id] !== false);
+                            return visibleLocalModels.length > 0 ? `
+                                <div class="max-h-40 overflow-y-auto custom-scrollbar my-1">
+                                    ${visibleLocalModels.map(lm => `
+                                        <button onclick="selectModel('local','${escapeHtml(lm.id)}')" class="w-full flex items-center justify-between p-2 rounded-xl transition-all mb-1 ${AppState.apiProvider === 'local' && AppState.selectedModel === lm.id ? 'bg-indigo-50 text-indigo-700 ring-1 ring-indigo-200' : 'hover:bg-slate-50 text-slate-600'}">
+                                            <div class="flex flex-col items-start w-full overflow-hidden">
+                                                <span class="text-xs font-bold truncate w-full text-left">${escapeHtml(lm.id)}</span>
+                                            </div>
+                                            ${AppState.apiProvider === 'local' && AppState.selectedModel === lm.id ? '<div class="w-1.5 h-1.5 rounded-full bg-indigo-600 ml-2 shrink-0"></div>' : ''}
+                                        </button>
+                                    `).join('')}
+                                </div>
+                            ` : AppState.localModels.length > 0 ? `
+                                <div class="text-[10px] text-slate-400 italic text-center py-2 bg-slate-50 rounded-lg mb-2">All local models hidden. Check Settings.</div>
+                            ` : `
+                                <div class="text-[10px] text-slate-400 italic text-center py-2 bg-slate-50 rounded-lg mb-2">No models fetched yet.</div>
+                            `;
+                        })()}
                         <button onclick="openSettings()" class="w-full flex items-center justify-center gap-2 p-2 mt-1 rounded-xl bg-slate-100 hover:bg-indigo-50 text-slate-600 hover:text-indigo-600 text-xs font-bold transition-all border border-transparent hover:border-indigo-100">
                             ${Icons.SettingsGear} Settings
                         </button>
