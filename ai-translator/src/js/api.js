@@ -129,8 +129,12 @@ async function callGeminiAPI(model, contents, config = {}, apiKey = null, signal
 }
 
 // ============= OpenAI API调用 =============
-// 需要使用 max_completion_tokens 而不是 max_tokens 的模型
-const MODELS_REQUIRING_MAX_COMPLETION_TOKENS = ['gpt-5-nano', 'gpt-5-mini', 'gpt-5.2', 'o1', 'o1-mini', 'o1-preview', 'o3', 'o3-mini'];
+// 需要特殊参数处理的新模型（不支持 temperature 和 max_tokens）
+const OPENAI_NEW_MODELS = ['gpt-5-nano', 'gpt-5-mini', 'gpt-5.2', 'o1', 'o1-mini', 'o1-preview', 'o3', 'o3-mini'];
+
+function isNewOpenAIModel(model) {
+    return OPENAI_NEW_MODELS.some(m => model.startsWith(m));
+}
 
 async function callOpenAIAPI(model, messages, config = {}, apiKey = null, signal = null) {
     if (!apiKey) {
@@ -139,12 +143,16 @@ async function callOpenAIAPI(model, messages, config = {}, apiKey = null, signal
 
     const body = {
         model: model,
-        messages: messages,
-        temperature: config.temperature || 0.3
+        messages: messages
     };
 
+    // 新模型不支持自定义 temperature，只支持默认值 1
+    if (!isNewOpenAIModel(model)) {
+        body.temperature = config.temperature || 0.3;
+    }
+
     // 新模型使用 max_completion_tokens，旧模型使用 max_tokens
-    if (MODELS_REQUIRING_MAX_COMPLETION_TOKENS.some(m => model.startsWith(m))) {
+    if (isNewOpenAIModel(model)) {
         body.max_completion_tokens = config.max_tokens || 4096;
     } else {
         body.max_tokens = config.max_tokens || 4096;
