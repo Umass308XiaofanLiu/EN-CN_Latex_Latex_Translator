@@ -129,6 +129,9 @@ async function callGeminiAPI(model, contents, config = {}, apiKey = null, signal
 }
 
 // ============= OpenAI API调用 =============
+// 需要使用 max_completion_tokens 而不是 max_tokens 的模型
+const MODELS_REQUIRING_MAX_COMPLETION_TOKENS = ['gpt-5-nano', 'gpt-5-mini', 'gpt-5.2', 'o1', 'o1-mini', 'o1-preview', 'o3', 'o3-mini'];
+
 async function callOpenAIAPI(model, messages, config = {}, apiKey = null, signal = null) {
     if (!apiKey) {
         throw new Error("OpenAI API Key not configured. Please add your API key in Settings.");
@@ -137,9 +140,15 @@ async function callOpenAIAPI(model, messages, config = {}, apiKey = null, signal
     const body = {
         model: model,
         messages: messages,
-        temperature: config.temperature || 0.3,
-        max_tokens: config.max_tokens || 4096
+        temperature: config.temperature || 0.3
     };
+
+    // 新模型使用 max_completion_tokens，旧模型使用 max_tokens
+    if (MODELS_REQUIRING_MAX_COMPLETION_TOKENS.some(m => model.startsWith(m))) {
+        body.max_completion_tokens = config.max_tokens || 4096;
+    } else {
+        body.max_tokens = config.max_tokens || 4096;
+    }
 
     // 如果需要JSON响应
     if (config.jsonMode) {
