@@ -388,7 +388,14 @@ async function refineSentence(text, lang, type, config, instruction = null, sign
 
     if (type === "grammar") {
         const baseInst = instruction || `${DEFAULT_GRAMMAR_PROMPT} (Language: ${lang === 'zh' ? 'Chinese' : 'English'})`;
-        prompt = `${baseInst} Return ONLY the corrected sentence, nothing else.\n\nText: "${text}"`;
+        prompt = `${baseInst}
+
+IMPORTANT RULES:
+1. If there are grammar errors, return ONLY the corrected sentence.
+2. If the text is already grammatically correct, return exactly: [NO_CHANGES]
+3. Do NOT explain or describe what you did. Return ONLY the corrected text or [NO_CHANGES].
+
+Text: "${text}"`;
     } else if (type === "simplify") {
         const baseInst = instruction || `${DEFAULT_SIMPLIFY_PROMPT} (Language: ${lang === 'zh' ? 'Chinese' : 'English'})
 CRITICAL RULES:

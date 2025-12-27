@@ -35,6 +35,9 @@ const AppState = {
     isRefining: false,
     customPrompts: { grammar: "", simplify: "" },
 
+    // Toast 提示
+    toast: null, // { message: string, type: 'info' | 'success' | 'warning' }
+
     // AI Insight
     aiInsight: null,
     isInsightLoading: false,

@@ -121,6 +121,7 @@ function renderApp(preserveScroll = true) {
             ${renderSettingsModal()}
             ${renderLocalSettingsModal()}
             ${renderSynonymPopup()}
+            ${renderToast()}
             ${renderHeader()}
             ${renderMainWorkspace()}
             ${renderFooter()}
@@ -151,6 +152,23 @@ function renderErrorBanner() {
             ${Icons.AlertCircle}
             <span class="text-xs font-medium">${escapeHtml(AppState.error)}</span>
             <button onclick="setState({error:null})" class="ml-2 hover:bg-rose-100 p-1 rounded-full">${Icons.XSmall}</button>
+        </div>
+    `;
+}
+
+// ============= Toast 提示框 =============
+function renderToast() {
+    if (!AppState.toast) return '';
+
+    const bgColor = {
+        'success': 'bg-emerald-50 border-emerald-200 text-emerald-700',
+        'warning': 'bg-amber-50 border-amber-200 text-amber-700',
+        'info': 'bg-blue-50 border-blue-200 text-blue-700'
+    }[AppState.toast.type] || 'bg-slate-50 border-slate-200 text-slate-700';
+
+    return `
+        <div class="fixed top-16 left-1/2 -translate-x-1/2 z-[100] ${bgColor} border px-5 py-3 rounded-xl shadow-xl flex items-center gap-3 backdrop-blur-sm bg-opacity-95 transition-all duration-300" onclick="setState({toast:null})">
+            <span class="text-sm font-medium">${escapeHtml(AppState.toast.message)}</span>
         </div>
     `;
 }

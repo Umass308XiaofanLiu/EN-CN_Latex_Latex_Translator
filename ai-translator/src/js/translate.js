@@ -200,11 +200,32 @@ async function handleAiRefine(index, field, type) {
         const config = getApiConfig();
         const customInst = type === 'custom' ? AppState.refinePrompt : instruction;
         const refined = await refineSentence(text, lang, type, config, customInst);
-        
+
         if (refined) {
-            const newVals = { ...AppState.editValues, [field]: refined };
-            setState({ editValues: newVals }, true);
-            await saveRowUpdate(index, newVals);
+            // 检测 AI 返回的 "无需修改" 标记或常见的无修改响应
+            const noChangePatterns = [
+                '[NO_CHANGES]',
+                'already grammatically correct',
+                'no grammar errors',
+                'no changes needed',
+                'text is correct',
+                '没有语法错误',
+                '语法正确',
+                '无需修改'
+            ];
+
+            const isNoChange = noChangePatterns.some(pattern =>
+                refined.toLowerCase().includes(pattern.toLowerCase())
+            ) || refined.trim() === text.trim();
+
+            if (isNoChange) {
+                // 显示提示框而不是替换文本
+                showToast(type === 'grammar' ? '✓ No grammar errors found' : '✓ Text is already simple enough', 'success');
+            } else {
+                const newVals = { ...AppState.editValues, [field]: refined };
+                setState({ editValues: newVals }, true);
+                await saveRowUpdate(index, newVals);
+            }
         }
     } catch (e) {
         setState({ error: e.message || "Refinement failed" });
@@ -212,6 +233,14 @@ async function handleAiRefine(index, field, type) {
         setState({ isRefining: false });
         if (type === 'custom') setState({ refinePrompt: "" }, true);
     }
+}
+
+// 显示 Toast 提示
+function showToast(message, type = 'info') {
+    setState({ toast: { message, type } });
+    setTimeout(() => {
+        setState({ toast: null });
+    }, 3000);
 }
 
 // 处理文本选择（同义词）
