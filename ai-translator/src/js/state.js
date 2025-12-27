@@ -19,10 +19,11 @@ const AppState = {
     error: null,
 
     // API配置
-    apiProvider: 'gemini', // 'gemini' | 'openai' | 'local'
+    apiProvider: 'gemini', // 'gemini' | 'openai' | 'claude' | 'local'
     selectedModel: "gemini-2.5-flash-lite",
     geminiApiKey: "", // Gemini API Key
     openaiApiKey: "", // OpenAI API Key
+    claudeApiKey: "", // Claude API Key
     localBaseUrl: "http://localhost:1234",
     localModels: [],
 
@@ -71,7 +72,10 @@ const AppState = {
         'gemini-3-pro-preview': true,
         'gpt-5-nano': true,
         'gpt-5-mini': true,
-        'gpt-5.2': true
+        'gpt-5.2': true,
+        'claude-3-5-haiku-20241022': true,
+        'claude-sonnet-4-5-20250514': true,
+        'claude-opus-4-5-20250514': true
     },
     
     // AI Toolbar 设置弹窗状态
@@ -104,7 +108,8 @@ function getApiConfig() {
         model: AppState.selectedModel,
         localBaseUrl: AppState.localBaseUrl,
         geminiApiKey: AppState.geminiApiKey,
-        openaiApiKey: AppState.openaiApiKey
+        openaiApiKey: AppState.openaiApiKey,
+        claudeApiKey: AppState.claudeApiKey
     };
 }
 

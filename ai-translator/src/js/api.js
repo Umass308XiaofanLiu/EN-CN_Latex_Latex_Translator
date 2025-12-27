@@ -1,5 +1,5 @@
 // ========================================
-// api.js - API服务（Gemini、OpenAI和本地LLM）
+// api.js - API服务（Gemini、OpenAI、Claude和本地LLM）
 // ========================================
 
 // Gemini API端点
@@ -7,6 +7,9 @@ const GEMINI_API_BASE = "https://generativelanguage.googleapis.com/v1beta/models
 
 // OpenAI API端点
 const OPENAI_API_BASE = "https://api.openai.com/v1/chat/completions";
+
+// Claude API端点
+const CLAUDE_API_BASE = "https://api.anthropic.com/v1/messages";
 
 // ============= 本地LLM调用（OpenAI兼容）=============
 async function callLocalLLM(baseUrl, model, messages, jsonMode = false, signal = null) {
@@ -211,6 +214,75 @@ async function callOpenAIAPI(model, messages, config = {}, apiKey = null, signal
     return data.choices?.[0]?.message?.content || "";
 }
 
+// ============= Claude API调用 =============
+// Claude 模型 token 限制
+function getMaxTokensForClaudeModel(model, configMax) {
+    if (configMax) return configMax;
+    // Haiku 模型使用较小的 token 限制
+    if (model.includes('haiku')) return 4096;
+    // Sonnet 和 Opus 使用较大限制
+    return 8192;
+}
+
+async function callClaudeAPI(model, messages, config = {}, apiKey = null, signal = null) {
+    if (!apiKey) {
+        throw new Error("Claude API Key not configured. Please add your API key in Settings.");
+    }
+
+    // 提取 system message（Claude 使用单独的 system 参数）
+    let systemPrompt = null;
+    const userMessages = [];
+
+    for (const msg of messages) {
+        if (msg.role === 'system') {
+            systemPrompt = msg.content;
+        } else {
+            userMessages.push({
+                role: msg.role,
+                content: msg.content
+            });
+        }
+    }
+
+    const body = {
+        model: model,
+        max_tokens: getMaxTokensForClaudeModel(model, config.max_tokens),
+        messages: userMessages
+    };
+
+    // 添加 system prompt（如果有）
+    if (systemPrompt) {
+        body.system = systemPrompt;
+    }
+
+    // Claude 支持 temperature 参数
+    if (config.temperature !== undefined) {
+        body.temperature = config.temperature;
+    } else {
+        body.temperature = 0.3;
+    }
+
+    const response = await fetch(CLAUDE_API_BASE, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            "x-api-key": apiKey,
+            "anthropic-version": "2023-06-01"
+        },
+        body: JSON.stringify(body),
+        signal
+    });
+
+    if (!response.ok) {
+        const errText = await response.text();
+        throw new Error(`Claude API Error: ${response.status} - ${errText}`);
+    }
+
+    const data = await response.json();
+    // Claude 返回格式: { content: [{ type: "text", text: "..." }] }
+    return data.content?.[0]?.text || "";
+}
+
 // ============= 批量翻译 =============
 async function translateBulk(text, srcLang, tgtLang, config, signal = null) {
     if (signal?.aborted) throw new DOMException("Aborted", "AbortError");
@@ -249,6 +321,22 @@ async function translateBulk(text, srcLang, tgtLang, config, signal = null) {
             ],
             { jsonMode: true },
             config.openaiApiKey,
+            signal
+        );
+        if (signal?.aborted) throw new DOMException("Aborted", "AbortError");
+        return parseJsonResponse(response);
+    }
+
+    // Claude Path
+    if (config.provider === 'claude') {
+        const response = await callClaudeAPI(
+            config.model,
+            [
+                { role: "system", content: systemPrompt },
+                { role: "user", content: text }
+            ],
+            { temperature: 0.3 },
+            config.claudeApiKey,
             signal
         );
         if (signal?.aborted) throw new DOMException("Aborted", "AbortError");
@@ -326,6 +414,19 @@ CRITICAL RULES:
         return response?.trim() || text;
     }
 
+    // Claude Path
+    if (config.provider === 'claude') {
+        const response = await callClaudeAPI(
+            config.model,
+            [{ role: "user", content: prompt }],
+            { temperature: 0.3 },
+            config.claudeApiKey,
+            signal
+        );
+        if (signal?.aborted) throw new DOMException("Aborted", "AbortError");
+        return response?.trim() || text;
+    }
+
     // Gemini Path
     const response = await callGeminiAPI(config.model, prompt, { temperature: 0.3 }, config.geminiApiKey, signal);
     if (signal?.aborted) throw new DOMException("Aborted", "AbortError");
@@ -365,6 +466,25 @@ async function getSmartUpdate(prompt, config, signal = null) {
             ],
             { jsonMode: true },
             config.openaiApiKey,
+            signal
+        );
+        if (signal?.aborted) throw new DOMException("Aborted", "AbortError");
+        try {
+            const data = parseJsonResponse(response);
+            return data.text || "";
+        } catch (e) { return ""; }
+    }
+
+    // Claude Path
+    if (config.provider === 'claude') {
+        const response = await callClaudeAPI(
+            config.model,
+            [
+                { role: "system", content: systemPrompt },
+                { role: "user", content: prompt + "\n\nRETURN JSON: {\"text\": \"...\"}" }
+            ],
+            { temperature: 0.3 },
+            config.claudeApiKey,
             signal
         );
         if (signal?.aborted) throw new DOMException("Aborted", "AbortError");
@@ -439,6 +559,20 @@ Return JSON: { "alternatives": ["option1", "option2", "option3", "option4"] }`;
         } catch (e) { return []; }
     }
 
+    // Claude Path
+    if (config.provider === 'claude') {
+        const response = await callClaudeAPI(
+            config.model,
+            [{ role: "user", content: prompt }],
+            { temperature: 0.3 },
+            config.claudeApiKey
+        );
+        try {
+            const data = parseJsonResponse(response);
+            return data.alternatives || [];
+        } catch (e) { return []; }
+    }
+
     // Gemini Path
     const responseSchema = {
         type: "OBJECT",
@@ -479,6 +613,17 @@ async function summarizeText(text, config) {
             [{ role: "user", content: prompt }],
             {},
             config.openaiApiKey
+        );
+        return response || "";
+    }
+
+    // Claude Path
+    if (config.provider === 'claude') {
+        const response = await callClaudeAPI(
+            config.model,
+            [{ role: "user", content: prompt }],
+            {},
+            config.claudeApiKey
         );
         return response || "";
     }

@@ -148,7 +148,10 @@ function renderSettingsModal() {
         { id: 'gemini-3-pro-preview', name: 'Gemini 3 Pro', provider: 'gemini', iconClass: 'text-indigo-600' },
         { id: 'gpt-5-nano', name: 'GPT-5 Nano', provider: 'openai', iconClass: 'text-teal-500' },
         { id: 'gpt-5-mini', name: 'GPT-5 Mini', provider: 'openai', iconClass: 'text-green-500' },
-        { id: 'gpt-5.2', name: 'GPT-5.2', provider: 'openai', iconClass: 'text-sky-600' }
+        { id: 'gpt-5.2', name: 'GPT-5.2', provider: 'openai', iconClass: 'text-sky-600' },
+        { id: 'claude-3-5-haiku-20241022', name: 'Claude 3.5 Haiku', provider: 'claude', iconClass: 'text-amber-500' },
+        { id: 'claude-sonnet-4-5-20250514', name: 'Claude Sonnet 4.5', provider: 'claude', iconClass: 'text-orange-600' },
+        { id: 'claude-opus-4-5-20250514', name: 'Claude Opus 4.5', provider: 'claude', iconClass: 'text-rose-600' }
     ];
 
     return `
@@ -245,6 +248,29 @@ function renderSettingsModal() {
                             Get your API key from <a href="https://platform.openai.com/api-keys" target="_blank" class="text-teal-500 hover:underline">OpenAI Platform</a>
                         </p>
                         <button onclick="saveOpenaiApiKey()" class="w-full mt-3 py-2.5 bg-teal-600 hover:bg-teal-700 text-white rounded-xl font-bold text-xs shadow-lg shadow-teal-200 active:scale-95 transition-all flex items-center justify-center gap-2">
+                            ${Icons.Save} Save API Key
+                        </button>
+                    </div>
+
+                    <!-- Claude API Key Section -->
+                    <div class="pb-5 border-b border-slate-100">
+                        <div class="flex items-center gap-2 mb-3">
+                            <div class="w-6 h-6 bg-gradient-to-br from-orange-500 to-rose-600 rounded-lg flex items-center justify-center">
+                                <svg class="w-3.5 h-3.5 text-white" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg>
+                            </div>
+                            <span class="text-xs font-bold text-slate-600 uppercase tracking-wide">Anthropic Claude API</span>
+                        </div>
+                        <div class="flex items-center bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 focus-within:ring-2 focus-within:ring-orange-100 transition-all">
+                            <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/></svg>
+                            <input type="password" id="claudeApiKeyInput" class="flex-grow bg-transparent border-none text-xs focus:ring-0 p-0 ml-2 text-slate-700 outline-none font-mono" value="${escapeHtml(AppState.claudeApiKey)}" placeholder="sk-ant-...">
+                            <button onclick="toggleApiKeyVisibility('claudeApiKeyInput')" class="text-slate-400 hover:text-slate-600 ml-2" title="Toggle visibility">
+                                ${Icons.Eye}
+                            </button>
+                        </div>
+                        <p class="text-[10px] text-slate-400 mt-2 px-1">
+                            Get your API key from <a href="https://console.anthropic.com/settings/keys" target="_blank" class="text-orange-500 hover:underline">Anthropic Console</a>
+                        </p>
+                        <button onclick="saveClaudeApiKey()" class="w-full mt-3 py-2.5 bg-orange-600 hover:bg-orange-700 text-white rounded-xl font-bold text-xs shadow-lg shadow-orange-200 active:scale-95 transition-all flex items-center justify-center gap-2">
                             ${Icons.Save} Save API Key
                         </button>
                     </div>
@@ -442,9 +468,16 @@ function renderModelSelector() {
         { id: 'gpt-5.2', name: 'GPT-5.2', sub: 'Best Quality', iconClass: 'text-sky-600', icon: Icons.Cpu }
     ];
 
+    const allClaudeModels = [
+        { id: 'claude-3-5-haiku-20241022', name: 'Claude 3.5 Haiku', sub: 'Fast & Efficient', iconClass: 'text-amber-500', icon: Icons.Rocket },
+        { id: 'claude-sonnet-4-5-20250514', name: 'Claude Sonnet 4.5', sub: 'Balanced Performance', iconClass: 'text-orange-600', icon: Icons.Zap },
+        { id: 'claude-opus-4-5-20250514', name: 'Claude Opus 4.5', sub: 'Best Quality', iconClass: 'text-rose-600', icon: Icons.Cpu }
+    ];
+
     // 根据可见性设置筛选模型
     const geminiModels = allGeminiModels.filter(m => AppState.modelVisibility[m.id] !== false);
     const openaiModels = allOpenaiModels.filter(m => AppState.modelVisibility[m.id] !== false);
+    const claudeModels = allClaudeModels.filter(m => AppState.modelVisibility[m.id] !== false);
 
     let currentIcon, currentIconClass, currentLabel;
     if (AppState.apiProvider === 'local') {
@@ -452,11 +485,17 @@ function renderModelSelector() {
         currentIconClass = 'text-indigo-600';
         currentLabel = AppState.selectedModel === 'local-model' ? 'Local LLM' : (AppState.selectedModel.length > 15 ? AppState.selectedModel.slice(0, 15) + '...' : AppState.selectedModel);
     } else if (AppState.apiProvider === 'openai') {
-        const openaiModel = openaiModels.find(m => m.id === AppState.selectedModel);
+        const openaiModel = allOpenaiModels.find(m => m.id === AppState.selectedModel);
         currentIcon = openaiModel?.icon || Icons.Cpu;
         currentIconClass = openaiModel?.iconClass || 'text-sky-600';
         currentLabel = AppState.selectedModel === 'gpt-5-nano' ? 'GPT-5 Nano' :
                        AppState.selectedModel === 'gpt-5-mini' ? 'GPT-5 Mini' : 'GPT-5.2';
+    } else if (AppState.apiProvider === 'claude') {
+        const claudeModel = allClaudeModels.find(m => m.id === AppState.selectedModel);
+        currentIcon = claudeModel?.icon || Icons.Cpu;
+        currentIconClass = claudeModel?.iconClass || 'text-orange-600';
+        currentLabel = AppState.selectedModel.includes('haiku') ? 'Haiku' :
+                       AppState.selectedModel.includes('sonnet') ? 'Sonnet 4.5' : 'Opus 4.5';
     } else if (AppState.selectedModel === 'gemini-2.5-flash-lite') {
         currentIcon = Icons.Rocket;
         currentIconClass = 'text-emerald-500';
@@ -499,6 +538,21 @@ function renderModelSelector() {
                         </div>
                         ${openaiModels.map(m => `
                             <button onclick="selectModel('openai','${m.id}')" class="w-full flex items-center justify-between p-2.5 rounded-xl transition-all ${AppState.apiProvider === 'openai' && AppState.selectedModel === m.id ? 'bg-sky-50 text-sky-700 ring-1 ring-sky-200' : 'hover:bg-white hover:shadow-sm text-slate-600'}">
+                                <div class="flex flex-col items-start">
+                                    <span class="text-xs font-bold uppercase tracking-wide">${m.name}</span>
+                                    <span class="text-[9px] opacity-70">${m.sub}</span>
+                                </div>
+                                <span class="${m.iconClass}">${m.icon}</span>
+                            </button>
+                        `).join('')}
+                    </div>
+                    <div class="p-2 space-y-1 bg-orange-50/50 border-b border-slate-100">
+                        <div class="text-[10px] font-bold text-slate-400 px-2 py-1 uppercase flex items-center gap-2">
+                            <svg class="w-3 h-3" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg>
+                            Anthropic Claude
+                        </div>
+                        ${claudeModels.map(m => `
+                            <button onclick="selectModel('claude','${m.id}')" class="w-full flex items-center justify-between p-2.5 rounded-xl transition-all ${AppState.apiProvider === 'claude' && AppState.selectedModel === m.id ? 'bg-orange-50 text-orange-700 ring-1 ring-orange-200' : 'hover:bg-white hover:shadow-sm text-slate-600'}">
                                 <div class="flex flex-col items-start">
                                     <span class="text-xs font-bold uppercase tracking-wide">${m.name}</span>
                                     <span class="text-[9px] opacity-70">${m.sub}</span>
@@ -977,6 +1031,18 @@ function saveOpenaiApiKey() {
     }
 }
 
+function saveClaudeApiKey() {
+    const input = document.getElementById('claudeApiKeyInput');
+    if (input) {
+        AppState.claudeApiKey = input.value.trim();
+        // 保存到localStorage
+        try {
+            localStorage.setItem('claudeApiKey', AppState.claudeApiKey);
+        } catch (e) {}
+        setState({ showLocalSettings: false });
+    }
+}
+
 function toggleSaveMenu() {
     AppState.showSaveMenu = !AppState.showSaveMenu;
     AppState.showModelMenu = false;
@@ -1205,6 +1271,12 @@ function loadSavedSettings() {
         const savedOpenaiKey = localStorage.getItem('openaiApiKey');
         if (savedOpenaiKey) {
             AppState.openaiApiKey = savedOpenaiKey;
+        }
+
+        // 加载 Claude API Key
+        const savedClaudeKey = localStorage.getItem('claudeApiKey');
+        if (savedClaudeKey) {
+            AppState.claudeApiKey = savedClaudeKey;
         }
 
         // 加载 Local Base URL
