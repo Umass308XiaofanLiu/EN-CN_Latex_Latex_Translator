@@ -301,7 +301,7 @@ function renderFormattedText(text) {
 
 // ==================== API.JS ====================
 // ========================================
-// api.js - API服务（Gemini和本地LLM）
+// api.js - API服务（Gemini、OpenAI和本地LLM）
 // ========================================
 
 // Gemini API端点
@@ -392,9 +392,9 @@ async function callGeminiAPI(model, contents, config = {}, apiKey = null, signal
     if (!apiKey) {
         throw new Error("Gemini API Key not configured. Please add your API key in Settings.");
     }
-    
+
     const url = `${GEMINI_API_BASE}/${model}:generateContent?key=${apiKey}`;
-    
+
     const body = {
         contents: [{ parts: [{ text: contents }] }],
         generationConfig: {
