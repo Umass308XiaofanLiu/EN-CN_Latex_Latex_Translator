@@ -131,14 +131,12 @@ function renderApp(preserveScroll = true) {
     // 同义词弹窗独立渲染到 body（避免被 root 内容替换影响）
     renderSynonymPopupOnly();
 
-    // 恢复滚动位置
+    // 同步恢复滚动位置（不使用 requestAnimationFrame，避免多次渲染时的竞态条件）
     if (preserveScroll) {
-        requestAnimationFrame(() => {
-            const newSourceContainer = document.querySelector('section:first-of-type .overflow-y-auto');
-            const newTargetContainer = document.querySelector('section:last-of-type .overflow-y-auto');
-            if (newSourceContainer) newSourceContainer.scrollTop = savedSourceScroll;
-            if (newTargetContainer) newTargetContainer.scrollTop = savedTargetScroll;
-        });
+        const newSourceContainer = document.querySelector('section:first-of-type .overflow-y-auto');
+        const newTargetContainer = document.querySelector('section:last-of-type .overflow-y-auto');
+        if (newSourceContainer) newSourceContainer.scrollTop = savedSourceScroll;
+        if (newTargetContainer) newTargetContainer.scrollTop = savedTargetScroll;
     }
 
     // 渲染后调整弹窗位置
