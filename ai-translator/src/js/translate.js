@@ -15,6 +15,11 @@ async function handleTranslate() {
 
     if (!AppState.inputText.trim()) return;
 
+    // 保存原始输入内容（首次翻译时）
+    if (!AppState.originalInputText || AppState.translationPairs.length === 0) {
+        AppState.originalInputText = AppState.inputText;
+    }
+
     // 同步基线以防止重复自动翻译
     AppState.lastTranslatedText = AppState.inputText;
 
@@ -45,9 +50,10 @@ async function handleTranslate() {
                 tgt: t.tgt,
                 history: [{ src: t.src, tgt: t.tgt }],
                 historyIndex: 0,
-                isUpdating: false
+                isUpdating: false,
+                isRegenerating: false
             }));
-            setState({ translationPairs: pairs, isEditingMode: false });
+            setState({ translationPairs: pairs, isEditingMode: false, viewMode: 'preview' });
         }
     } catch (err) {
         if (err.name !== 'AbortError') {
@@ -491,9 +497,11 @@ function handleClear() {
 
     setState({
         inputText: "",
+        originalInputText: "",
         translationPairs: [],
         activeIndex: null,
         isEditingMode: true,
+        viewMode: 'edit',
         isLoading: false,
         sessionId: Date.now().toString(),
         error: null
@@ -501,10 +509,10 @@ function handleClear() {
 
     updateSynonymState({ show: false });
 
-    setTimeout(() => { 
-        AppState.isRestoringHistory = false; 
+    setTimeout(() => {
+        AppState.isRestoringHistory = false;
     }, 100);
-    
+
     AppState.lastTranslatedText = "";
 }
 
@@ -541,26 +549,23 @@ async function handleRegenerateAll() {
 
     try {
         const config = getApiConfig();
-        // 获取所有源文本
-        const fullSourceText = AppState.translationPairs.map(p => p.src).join('\n');
+        // 使用原始输入内容重新翻译（不是按句拼接的）
+        const originalText = AppState.originalInputText || AppState.inputText;
 
         // 重新翻译所有内容
-        const result = await translateBulk(fullSourceText, AppState.sourceLang, AppState.targetLang, config, controller.signal);
+        const result = await translateBulk(originalText, AppState.sourceLang, AppState.targetLang, config, controller.signal);
 
         if (result?.translations) {
-            const pairs = result.translations.map((t, idx) => {
-                const oldPair = AppState.translationPairs[idx] || { history: [], historyIndex: -1 };
-                const newHistory = [...(oldPair.history || []), { src: t.src, tgt: t.tgt }];
-                return {
-                    src: t.src,
-                    tgt: t.tgt,
-                    history: newHistory,
-                    historyIndex: newHistory.length - 1,
-                    isUpdating: false,
-                    isRegenerating: false
-                };
-            });
-            setState({ translationPairs: pairs, isEditingMode: false, activeIndex: null });
+            // 重新生成时，每个翻译对重置历史记录（不累加每句的历史）
+            const pairs = result.translations.map((t) => ({
+                src: t.src,
+                tgt: t.tgt,
+                history: [{ src: t.src, tgt: t.tgt }],
+                historyIndex: 0,
+                isUpdating: false,
+                isRegenerating: false
+            }));
+            setState({ translationPairs: pairs, viewMode: 'preview', activeIndex: null });
         }
     } catch (err) {
         if (err.name !== 'AbortError') {
@@ -603,6 +608,7 @@ async function handleRegenerateTranslation(index) {
     try {
         const config = getApiConfig();
         const srcText = pair.src;
+        const oldTgt = pair.tgt;
 
         // 使用当前语言设置重新翻译
         const result = await translateBulk(srcText, AppState.sourceLang, AppState.targetLang, config, controller.signal);
@@ -610,12 +616,14 @@ async function handleRegenerateTranslation(index) {
         if (result?.translations && result.translations.length > 0) {
             const newTgt = result.translations[0].tgt;
 
-            // 添加到历史记录
-            addHistory(index, srcText, newTgt);
+            // 只有当新翻译与旧翻译不同时，才添加到历史记录
+            if (newTgt !== oldTgt) {
+                addHistory(index, srcText, newTgt);
 
-            // 如果当前正在编辑这一行，同时更新 editValues
-            if (AppState.activeIndex === index) {
-                AppState.editValues.tgt = newTgt;
+                // 如果当前正在编辑这一行，同时更新 editValues
+                if (AppState.activeIndex === index) {
+                    AppState.editValues.tgt = newTgt;
+                }
             }
         }
     } catch (err) {

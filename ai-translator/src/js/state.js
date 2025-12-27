@@ -5,6 +5,7 @@
 const AppState = {
     // 输入输出状态
     inputText: "",
+    originalInputText: "",  // 保存原始粘贴的内容
     translationPairs: [],
     sourceLang: "zh",
     targetLang: "en",
@@ -14,6 +15,7 @@ const AppState = {
     isAutoTranslate: true,
     isLoading: false,
     isEditingMode: true,
+    viewMode: 'edit',  // 'edit' | 'preview' | 'original'
     error: null,
 
     // API配置
