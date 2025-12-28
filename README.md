@@ -31,6 +31,7 @@
   - Google Gemini API (推荐)
   - OpenAI API (GPT-5 系列)
   - Anthropic Claude API (Claude 4.5 系列)
+  - DeepSeek API (V3.2 系列)
   - 本地 LLM (OpenAI 兼容接口)
 
 ## 📦 项目结构
@@ -60,6 +61,7 @@ ai-translator/
    - **Gemini**: 输入 Google Gemini API Key
    - **OpenAI**: 输入 OpenAI API Key
    - **Claude**: 输入 Claude API Key 和代理 URL
+   - **DeepSeek**: 输入 DeepSeek API Key
 3. 粘贴需要翻译的学术文本
 4. 点击 "TRANSLATE" 开始翻译
 
@@ -97,6 +99,7 @@ python build.py
 | OpenAI API Key | OpenAI 服务密钥 |
 | Claude API Key | Anthropic Claude 服务密钥 |
 | Claude Proxy URL | Cloudflare Worker 代理地址（用于绕过 CORS） |
+| DeepSeek API Key | DeepSeek 服务密钥 |
 | 本地服务器地址 | LM Studio 或其他兼容服务的 URL |
 | 模型可见性 | 控制模型选择器中显示哪些模型 |
 | 自动保存间隔 | 1-10 分钟 |
@@ -123,6 +126,12 @@ python build.py
 
 > 注意：Claude API 需要通过代理访问以绕过 CORS 限制
 
+### DeepSeek (云端)
+- **DeepSeek V3.2** - 非思考模式，快速响应
+- **DeepSeek V3.2 Reasoner** - 思考模式，适合复杂推理翻译
+
+> 获取 API Key：[DeepSeek Platform](https://platform.deepseek.com/api_keys)
+
 ### 本地 LLM (离线)
 - 支持任何 OpenAI 兼容接口
 - 如 Llama、Mistral、Qwen 等本地模型
@@ -147,7 +156,13 @@ python build.py
 
 ## 📝 更新日志
 
-### v1.1.0 (最新)
+### v1.2.0 (最新)
+- 新增 DeepSeek API 支持 (V3.2 系列)
+- 支持 DeepSeek V3.2 非思考模式 (deepseek-chat)
+- 支持 DeepSeek V3.2 Reasoner 思考模式 (deepseek-reasoner)
+- 新增 DeepSeek API Key 设置界面
+
+### v1.1.0
 - 新增 Anthropic Claude 模型支持 (Haiku 4.5, Sonnet 4.5, Opus 4.5)
 - 新增 OpenAI 模型支持 (GPT-5 Nano, Mini, 5.2, o1/o3 系列)
 - 新增 Claude API 代理支持解决 CORS 限制
@@ -165,4 +180,4 @@ python build.py
 
 ---
 
-**提示**: 为获得最佳翻译效果，建议使用 Gemini 3 Pro Preview 或 Claude Opus 4.5 模型。
+**提示**: 为获得最佳翻译效果，建议使用 Gemini 3 Pro Preview、Claude Opus 4.5 或 DeepSeek V3.2 Reasoner 模型。
