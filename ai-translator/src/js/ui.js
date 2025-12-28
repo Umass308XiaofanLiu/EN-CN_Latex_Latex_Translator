@@ -186,7 +186,9 @@ function renderSettingsModal() {
         { id: 'gpt-5.2', name: 'GPT-5.2', provider: 'openai', iconClass: 'text-sky-600' },
         { id: 'claude-haiku-4-5-20251001', name: 'Claude Haiku 4.5', provider: 'claude', iconClass: 'text-amber-500' },
         { id: 'claude-sonnet-4-5-20250929', name: 'Claude Sonnet 4.5', provider: 'claude', iconClass: 'text-orange-600' },
-        { id: 'claude-opus-4-5-20251101', name: 'Claude Opus 4.5', provider: 'claude', iconClass: 'text-rose-600' }
+        { id: 'claude-opus-4-5-20251101', name: 'Claude Opus 4.5', provider: 'claude', iconClass: 'text-rose-600' },
+        { id: 'deepseek-chat', name: 'DeepSeek V3.2', provider: 'deepseek', iconClass: 'text-blue-500' },
+        { id: 'deepseek-reasoner', name: 'DeepSeek V3.2 Reasoner', provider: 'deepseek', iconClass: 'text-purple-500' }
     ];
 
     return `
@@ -320,6 +322,29 @@ function renderSettingsModal() {
 
                         <button onclick="saveClaudeSettings()" class="w-full mt-3 py-2.5 bg-orange-600 hover:bg-orange-700 text-white rounded-xl font-bold text-xs shadow-lg shadow-orange-200 active:scale-95 transition-all flex items-center justify-center gap-2">
                             ${Icons.Save} Save Claude Settings
+                        </button>
+                    </div>
+
+                    <!-- DeepSeek API Key Section -->
+                    <div class="pb-5 border-b border-slate-100">
+                        <div class="flex items-center gap-2 mb-3">
+                            <div class="w-6 h-6 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
+                                <svg class="w-3.5 h-3.5 text-white" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+                            </div>
+                            <span class="text-xs font-bold text-slate-600 uppercase tracking-wide">DeepSeek API</span>
+                        </div>
+                        <div class="flex items-center bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 focus-within:ring-2 focus-within:ring-blue-100 transition-all">
+                            <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/></svg>
+                            <input type="password" id="deepseekApiKeyInput" class="flex-grow bg-transparent border-none text-xs focus:ring-0 p-0 ml-2 text-slate-700 outline-none font-mono" value="${escapeHtml(AppState.deepseekApiKey)}" placeholder="sk-...">
+                            <button onclick="toggleApiKeyVisibility('deepseekApiKeyInput')" class="text-slate-400 hover:text-slate-600 ml-2" title="Toggle visibility">
+                                ${Icons.Eye}
+                            </button>
+                        </div>
+                        <p class="text-[10px] text-slate-400 mt-2 px-1">
+                            Get your API key from <a href="https://platform.deepseek.com/api_keys" target="_blank" class="text-blue-500 hover:underline">DeepSeek Platform</a>
+                        </p>
+                        <button onclick="saveDeepseekApiKey()" class="w-full mt-3 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold text-xs shadow-lg shadow-blue-200 active:scale-95 transition-all flex items-center justify-center gap-2">
+                            ${Icons.Save} Save API Key
                         </button>
                     </div>
 
@@ -522,10 +547,16 @@ function renderModelSelector() {
         { id: 'claude-opus-4-5-20251101', name: 'Claude Opus 4.5', sub: 'Best Quality', iconClass: 'text-rose-600', icon: Icons.Cpu }
     ];
 
+    const allDeepseekModels = [
+        { id: 'deepseek-chat', name: 'DeepSeek V3.2', sub: 'Non-thinking Mode', iconClass: 'text-blue-500', icon: Icons.Zap },
+        { id: 'deepseek-reasoner', name: 'DeepSeek V3.2 Reasoner', sub: 'Thinking Mode', iconClass: 'text-purple-500', icon: Icons.Lightbulb }
+    ];
+
     // 根据可见性设置筛选模型
     const geminiModels = allGeminiModels.filter(m => AppState.modelVisibility[m.id] !== false);
     const openaiModels = allOpenaiModels.filter(m => AppState.modelVisibility[m.id] !== false);
     const claudeModels = allClaudeModels.filter(m => AppState.modelVisibility[m.id] !== false);
+    const deepseekModels = allDeepseekModels.filter(m => AppState.modelVisibility[m.id] !== false);
 
     let currentIcon, currentIconClass, currentLabel;
     if (AppState.apiProvider === 'local') {
@@ -544,6 +575,11 @@ function renderModelSelector() {
         currentIconClass = claudeModel?.iconClass || 'text-orange-600';
         currentLabel = AppState.selectedModel.includes('haiku') ? 'Haiku' :
                        AppState.selectedModel.includes('sonnet') ? 'Sonnet 4.5' : 'Opus 4.5';
+    } else if (AppState.apiProvider === 'deepseek') {
+        const deepseekModel = allDeepseekModels.find(m => m.id === AppState.selectedModel);
+        currentIcon = deepseekModel?.icon || Icons.Zap;
+        currentIconClass = deepseekModel?.iconClass || 'text-blue-500';
+        currentLabel = AppState.selectedModel === 'deepseek-reasoner' ? 'V3.2 Reasoner' : 'DeepSeek V3.2';
     } else if (AppState.selectedModel === 'gemini-2.5-flash-lite') {
         currentIcon = Icons.Rocket;
         currentIconClass = 'text-emerald-500';
@@ -601,6 +637,21 @@ function renderModelSelector() {
                         </div>
                         ${claudeModels.map(m => `
                             <button onclick="selectModel('claude','${m.id}')" class="w-full flex items-center justify-between p-2.5 rounded-xl transition-all ${AppState.apiProvider === 'claude' && AppState.selectedModel === m.id ? 'bg-orange-50 text-orange-700 ring-1 ring-orange-200' : 'hover:bg-white hover:shadow-sm text-slate-600'}">
+                                <div class="flex flex-col items-start">
+                                    <span class="text-xs font-bold uppercase tracking-wide">${m.name}</span>
+                                    <span class="text-[9px] opacity-70">${m.sub}</span>
+                                </div>
+                                <span class="${m.iconClass}">${m.icon}</span>
+                            </button>
+                        `).join('')}
+                    </div>
+                    <div class="p-2 space-y-1 bg-blue-50/50 border-b border-slate-100">
+                        <div class="text-[10px] font-bold text-slate-400 px-2 py-1 uppercase flex items-center gap-2">
+                            <svg class="w-3 h-3" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+                            DeepSeek
+                        </div>
+                        ${deepseekModels.map(m => `
+                            <button onclick="selectModel('deepseek','${m.id}')" class="w-full flex items-center justify-between p-2.5 rounded-xl transition-all ${AppState.apiProvider === 'deepseek' && AppState.selectedModel === m.id ? 'bg-blue-50 text-blue-700 ring-1 ring-blue-200' : 'hover:bg-white hover:shadow-sm text-slate-600'}">
                                 <div class="flex flex-col items-start">
                                     <span class="text-xs font-bold uppercase tracking-wide">${m.name}</span>
                                     <span class="text-[9px] opacity-70">${m.sub}</span>
@@ -1099,6 +1150,18 @@ function saveClaudeSettings() {
     setState({ showSettings: false });
 }
 
+function saveDeepseekApiKey() {
+    const input = document.getElementById('deepseekApiKeyInput');
+    if (input) {
+        AppState.deepseekApiKey = input.value.trim();
+        // 保存到localStorage
+        try {
+            localStorage.setItem('deepseekApiKey', AppState.deepseekApiKey);
+        } catch (e) {}
+        setState({ showSettings: false });
+    }
+}
+
 function toggleSaveMenu() {
     AppState.showSaveMenu = !AppState.showSaveMenu;
     AppState.showModelMenu = false;
@@ -1343,6 +1406,12 @@ function loadSavedSettings() {
         const savedClaudeProxyUrl = localStorage.getItem('claudeProxyUrl');
         if (savedClaudeProxyUrl) {
             AppState.claudeProxyUrl = savedClaudeProxyUrl;
+        }
+
+        // 加载 DeepSeek API Key
+        const savedDeepseekKey = localStorage.getItem('deepseekApiKey');
+        if (savedDeepseekKey) {
+            AppState.deepseekApiKey = savedDeepseekKey;
         }
 
         // 加载 Local Base URL
