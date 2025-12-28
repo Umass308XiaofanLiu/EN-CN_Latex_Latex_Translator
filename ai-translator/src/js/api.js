@@ -11,6 +11,9 @@ const OPENAI_API_BASE = "https://api.openai.com/v1/chat/completions";
 // Claude API端点
 const CLAUDE_API_BASE = "https://api.anthropic.com/v1/messages";
 
+// DeepSeek API端点
+const DEEPSEEK_API_BASE = "https://api.deepseek.com/chat/completions";
+
 // ============= 本地LLM调用（OpenAI兼容）=============
 async function callLocalLLM(baseUrl, model, messages, jsonMode = false, signal = null) {
     const body = {
@@ -290,6 +293,56 @@ async function callClaudeAPI(model, messages, config = {}, apiKey = null, signal
     return data.content?.[0]?.text || "";
 }
 
+// ============= DeepSeek API调用 =============
+// DeepSeek-V3.2 模型：deepseek-chat (非思考模式), deepseek-reasoner (思考模式)
+const DEEPSEEK_THINKING_MODELS = ['deepseek-reasoner'];
+
+function isDeepSeekThinkingModel(model) {
+    return DEEPSEEK_THINKING_MODELS.some(m => model.startsWith(m));
+}
+
+async function callDeepSeekAPI(model, messages, config = {}, apiKey = null, signal = null) {
+    if (!apiKey) {
+        throw new Error("DeepSeek API Key not configured. Please add your API key in Settings.");
+    }
+
+    const body = {
+        model: model,
+        messages: messages
+    };
+
+    // 思考模式模型 (deepseek-reasoner) 不支持自定义 temperature
+    if (!isDeepSeekThinkingModel(model)) {
+        body.temperature = config.temperature || 0.3;
+    }
+
+    // 设置 max_tokens
+    body.max_tokens = config.max_tokens || 4096;
+
+    // 如果需要JSON响应
+    if (config.jsonMode && !isDeepSeekThinkingModel(model)) {
+        body.response_format = { type: "json_object" };
+    }
+
+    const response = await fetch(DEEPSEEK_API_BASE, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${apiKey}`
+        },
+        body: JSON.stringify(body),
+        signal
+    });
+
+    if (!response.ok) {
+        const errText = await response.text();
+        throw new Error(`DeepSeek API Error: ${response.status} - ${errText}`);
+    }
+
+    const data = await response.json();
+    return data.choices?.[0]?.message?.content || "";
+}
+
 // ============= 批量翻译 =============
 async function translateBulk(text, srcLang, tgtLang, config, signal = null) {
     if (signal?.aborted) throw new DOMException("Aborted", "AbortError");
@@ -346,6 +399,22 @@ async function translateBulk(text, srcLang, tgtLang, config, signal = null) {
             config.claudeApiKey,
             signal,
             config.claudeProxyUrl
+        );
+        if (signal?.aborted) throw new DOMException("Aborted", "AbortError");
+        return parseJsonResponse(response);
+    }
+
+    // DeepSeek Path
+    if (config.provider === 'deepseek') {
+        const response = await callDeepSeekAPI(
+            config.model,
+            [
+                { role: "system", content: systemPrompt },
+                { role: "user", content: text }
+            ],
+            { jsonMode: true },
+            config.deepseekApiKey,
+            signal
         );
         if (signal?.aborted) throw new DOMException("Aborted", "AbortError");
         return parseJsonResponse(response);
@@ -443,6 +512,19 @@ CRITICAL RULES:
         return response?.trim() || text;
     }
 
+    // DeepSeek Path
+    if (config.provider === 'deepseek') {
+        const response = await callDeepSeekAPI(
+            config.model,
+            [{ role: "user", content: prompt }],
+            { temperature: 0.3 },
+            config.deepseekApiKey,
+            signal
+        );
+        if (signal?.aborted) throw new DOMException("Aborted", "AbortError");
+        return response?.trim() || text;
+    }
+
     // Gemini Path
     const response = await callGeminiAPI(config.model, prompt, { temperature: 0.3 }, config.geminiApiKey, signal);
     if (signal?.aborted) throw new DOMException("Aborted", "AbortError");
@@ -503,6 +585,25 @@ async function getSmartUpdate(prompt, config, signal = null) {
             config.claudeApiKey,
             signal,
             config.claudeProxyUrl
+        );
+        if (signal?.aborted) throw new DOMException("Aborted", "AbortError");
+        try {
+            const data = parseJsonResponse(response);
+            return data.text || "";
+        } catch (e) { return ""; }
+    }
+
+    // DeepSeek Path
+    if (config.provider === 'deepseek') {
+        const response = await callDeepSeekAPI(
+            config.model,
+            [
+                { role: "system", content: systemPrompt },
+                { role: "user", content: prompt + "\n\nRETURN JSON: {\"text\": \"...\"}" }
+            ],
+            { jsonMode: true },
+            config.deepseekApiKey,
+            signal
         );
         if (signal?.aborted) throw new DOMException("Aborted", "AbortError");
         try {
@@ -592,6 +693,20 @@ Return JSON: { "alternatives": ["option1", "option2", "option3", "option4"] }`;
         } catch (e) { return []; }
     }
 
+    // DeepSeek Path
+    if (config.provider === 'deepseek') {
+        const response = await callDeepSeekAPI(
+            config.model,
+            [{ role: "user", content: prompt }],
+            { jsonMode: true },
+            config.deepseekApiKey
+        );
+        try {
+            const data = parseJsonResponse(response);
+            return data.alternatives || [];
+        } catch (e) { return []; }
+    }
+
     // Gemini Path
     const responseSchema = {
         type: "OBJECT",
@@ -645,6 +760,17 @@ async function summarizeText(text, config) {
             config.claudeApiKey,
             null,
             config.claudeProxyUrl
+        );
+        return response || "";
+    }
+
+    // DeepSeek Path
+    if (config.provider === 'deepseek') {
+        const response = await callDeepSeekAPI(
+            config.model,
+            [{ role: "user", content: prompt }],
+            {},
+            config.deepseekApiKey
         );
         return response || "";
     }

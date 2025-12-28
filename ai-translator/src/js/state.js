@@ -19,12 +19,13 @@ const AppState = {
     error: null,
 
     // API配置
-    apiProvider: 'gemini', // 'gemini' | 'openai' | 'claude' | 'local'
+    apiProvider: 'gemini', // 'gemini' | 'openai' | 'claude' | 'deepseek' | 'local'
     selectedModel: "gemini-2.5-flash-lite",
     geminiApiKey: "", // Gemini API Key
     openaiApiKey: "", // OpenAI API Key
     claudeApiKey: "", // Claude API Key
     claudeProxyUrl: "", // Claude Proxy URL (Cloudflare Worker)
+    deepseekApiKey: "", // DeepSeek API Key
     localBaseUrl: "http://localhost:1234",
     localModels: [],
 
@@ -79,7 +80,9 @@ const AppState = {
         'gpt-5.2': true,
         'claude-haiku-4-5-20251001': true,
         'claude-sonnet-4-5-20250929': true,
-        'claude-opus-4-5-20251101': true
+        'claude-opus-4-5-20251101': true,
+        'deepseek-chat': true,
+        'deepseek-reasoner': true
     },
     
     // AI Toolbar 设置弹窗状态
@@ -114,7 +117,8 @@ function getApiConfig() {
         geminiApiKey: AppState.geminiApiKey,
         openaiApiKey: AppState.openaiApiKey,
         claudeApiKey: AppState.claudeApiKey,
-        claudeProxyUrl: AppState.claudeProxyUrl
+        claudeProxyUrl: AppState.claudeProxyUrl,
+        deepseekApiKey: AppState.deepseekApiKey
     };
 }
 
