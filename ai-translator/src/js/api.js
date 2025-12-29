@@ -344,18 +344,27 @@ async function callDeepSeekAPI(model, messages, config = {}, apiKey = null, sign
 }
 
 // ============= 批量翻译 =============
-async function translateBulk(text, srcLang, tgtLang, config, signal = null) {
+async function translateBulk(text, srcLang, tgtLang, config, signal = null, autoSegment = true) {
     if (signal?.aborted) throw new DOMException("Aborted", "AbortError");
 
     const srcName = srcLang === 'zh' ? 'Chinese' : 'English';
     const tgtName = tgtLang === 'zh' ? 'Chinese' : 'English';
 
-    const systemPrompt = `You are a professional academic translator. 
+    // 根据 autoSegment 选项选择不同的 prompt
+    const systemPrompt = autoSegment
+        ? `You are a professional academic translator.
 1. Split input into logical sentences/segments.
 2. Translate ${srcName} to ${tgtName}.
 3. Keep LaTeX math/citations intact.
 4. You MUST return ONLY valid JSON: {"translations": [{"src": "Original 1", "tgt": "Translated 1"}]}
-5. Do NOT include any text before or after the JSON.`;
+5. Do NOT include any text before or after the JSON.`
+        : `You are a professional academic translator.
+1. Translate the ENTIRE input as a SINGLE unit from ${srcName} to ${tgtName}.
+2. Do NOT split into sentences or segments - keep as one complete translation.
+3. Keep LaTeX math/citations intact.
+4. Preserve the original paragraph structure and line breaks.
+5. You MUST return ONLY valid JSON: {"translations": [{"src": "The entire original text", "tgt": "The entire translated text"}]}
+6. Do NOT include any text before or after the JSON.`;
 
     if (config.provider === 'local') {
         const response = await callLocalLLM(
