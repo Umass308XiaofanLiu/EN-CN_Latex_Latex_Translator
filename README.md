@@ -95,6 +95,7 @@ python build.py
 
 | 选项 | 说明 |
 |------|------|
+| Auto Segmentation | 自动分段开关：开启时逐句分段对照显示，关闭时整体翻译保持原排版 |
 | Gemini API Key | Google Gemini 服务密钥 |
 | OpenAI API Key | OpenAI 服务密钥 |
 | Claude API Key | Anthropic Claude 服务密钥 |
@@ -156,7 +157,17 @@ python build.py
 
 ## 📝 更新日志
 
-### v1.2.0 (最新)
+### v1.3.0 (最新)
+- 新增自动分段开关功能 (Auto Segmentation)
+  - 开启：逐句分段对照显示（默认）
+  - 关闭：整体翻译，保持原始段落排版
+- 新增按钮反馈动画效果
+  - 保存 API Key 时按钮显示 "Saved!" 成功提示
+  - 复制文本时按钮显示绿色勾选动画
+  - 连接本地服务器成功时显示 "Connected!" 提示
+- 修复设置弹窗点击按钮后滚动位置重置问题
+
+### v1.2.0
 - 新增 DeepSeek API 支持 (V3.2 系列)
 - 支持 DeepSeek V3.2 非思考模式 (deepseek-chat)
 - 支持 DeepSeek V3.2 Reasoner 思考模式 (deepseek-reasoner)
