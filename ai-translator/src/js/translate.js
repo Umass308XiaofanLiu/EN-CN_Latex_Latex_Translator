@@ -382,20 +382,17 @@ async function handleSummary() {
 // 连接本地服务器
 async function handleConnectLocal() {
     setState({ isConnectingLocal: true, error: null });
-    
+
     try {
         const models = await fetchLocalModels(AppState.localBaseUrl);
-        setState({ localModels: models });
-        
+
         let selectedModelId;
         if (models.length > 0) {
             selectedModelId = models[0].id;
-            setState({ apiProvider: 'local', selectedModel: selectedModelId });
         } else {
             selectedModelId = 'local-model';
-            setState({ apiProvider: 'local', selectedModel: selectedModelId });
         }
-        
+
         // 保存到 localStorage
         try {
             localStorage.setItem('apiProvider', 'local');
@@ -403,16 +400,23 @@ async function handleConnectLocal() {
             localStorage.setItem('localBaseUrl', AppState.localBaseUrl);
         } catch (e) {}
 
-        // 显示按钮反馈动画
-        if (AppState._connectButtonElement) {
-            showConnectButtonFeedback(AppState._connectButtonElement, models.length);
-            AppState._connectButtonElement = null;
-        }
-        setState({ showLocalSettings: false });
+        // 批量更新状态
+        setState({
+            localModels: models,
+            apiProvider: 'local',
+            selectedModel: selectedModelId,
+            isConnectingLocal: false
+        });
+
+        // 显示按钮反馈动画（在渲染完成后，需要重新获取按钮元素）
+        requestAnimationFrame(() => {
+            const btn = document.getElementById('connectLocalBtn');
+            if (btn) {
+                showConnectButtonFeedback(btn, models.length);
+            }
+        });
     } catch (e) {
-        setState({ error: e.message });
-    } finally {
-        setState({ isConnectingLocal: false });
+        setState({ error: e.message, isConnectingLocal: false });
     }
 }
 
