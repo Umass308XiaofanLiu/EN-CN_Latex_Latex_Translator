@@ -63,6 +63,86 @@ function copyToClipboard(text) {
     navigator.clipboard.writeText(text);
 }
 
+// 按钮反馈动画：短暂显示成功状态（用于复制按钮等小图标按钮）
+function showButtonFeedback(buttonElement, duration = 1500) {
+    if (!buttonElement) return;
+
+    // 保存原始内容和样式
+    const originalHTML = buttonElement.innerHTML;
+    const originalClasses = buttonElement.className;
+
+    // 设置成功状态 - 勾选图标
+    const checkIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>`;
+    buttonElement.innerHTML = checkIcon;
+    buttonElement.classList.remove('text-slate-400', 'hover:text-indigo-600');
+    buttonElement.classList.add('text-emerald-500');
+    buttonElement.style.transform = 'scale(1.15)';
+    buttonElement.style.transition = 'all 0.2s ease';
+
+    // 恢复原始状态
+    setTimeout(() => {
+        buttonElement.innerHTML = originalHTML;
+        buttonElement.className = originalClasses;
+        buttonElement.style.transform = '';
+        buttonElement.style.transition = '';
+    }, duration);
+}
+
+// 保存按钮反馈动画（用于 Save API Key 等按钮）
+function showSaveButtonFeedback(buttonElement, duration = 1500) {
+    if (!buttonElement) return;
+
+    // 保存原始内容和背景色类
+    const originalHTML = buttonElement.innerHTML;
+    const originalBgClass = [...buttonElement.classList].find(c => c.startsWith('bg-') && !c.includes('opacity'));
+
+    // 设置成功状态 - 绿色背景 + 勾选图标
+    const checkIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>`;
+    buttonElement.innerHTML = `${checkIcon} <span class="ml-1">Saved!</span>`;
+
+    // 移除原始背景色，添加绿色背景
+    if (originalBgClass) {
+        buttonElement.classList.remove(originalBgClass);
+    }
+    buttonElement.classList.add('bg-emerald-500');
+
+    // 恢复原始状态
+    setTimeout(() => {
+        buttonElement.innerHTML = originalHTML;
+        buttonElement.classList.remove('bg-emerald-500');
+        if (originalBgClass) {
+            buttonElement.classList.add(originalBgClass);
+        }
+    }, duration);
+}
+
+// 连接按钮反馈动画
+function showConnectButtonFeedback(buttonElement, modelCount, duration = 2000) {
+    if (!buttonElement) return;
+
+    // 保存原始内容
+    const originalHTML = buttonElement.innerHTML;
+    const originalBgClass = [...buttonElement.classList].find(c => c.startsWith('bg-') && !c.includes('opacity'));
+
+    // 设置成功状态
+    const checkIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>`;
+    buttonElement.innerHTML = `${checkIcon} <span class="ml-1">Connected! (${modelCount} models)</span>`;
+
+    if (originalBgClass) {
+        buttonElement.classList.remove(originalBgClass);
+    }
+    buttonElement.classList.add('bg-emerald-500');
+
+    // 恢复原始状态
+    setTimeout(() => {
+        buttonElement.innerHTML = originalHTML;
+        buttonElement.classList.remove('bg-emerald-500');
+        if (originalBgClass) {
+            buttonElement.classList.add(originalBgClass);
+        }
+    }, duration);
+}
+
 // 弹窗位置自动调整函数
 function adjustPopupPosition(popupId, padding = 10) {
     requestAnimationFrame(() => {
@@ -283,7 +363,7 @@ function renderSettingsModal() {
                         <p class="text-[10px] text-slate-400 mt-2 px-1">
                             Get your API key from <a href="https://aistudio.google.com/apikey" target="_blank" class="text-indigo-500 hover:underline">Google AI Studio</a>
                         </p>
-                        <button onclick="saveGeminiApiKey()" class="w-full mt-3 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold text-xs shadow-lg shadow-indigo-200 active:scale-95 transition-all flex items-center justify-center gap-2">
+                        <button id="saveGeminiBtn" onclick="saveGeminiApiKey(this)" class="w-full mt-3 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold text-xs shadow-lg shadow-indigo-200 active:scale-95 transition-all flex items-center justify-center gap-2">
                             ${Icons.Save} Save API Key
                         </button>
                     </div>
@@ -306,7 +386,7 @@ function renderSettingsModal() {
                         <p class="text-[10px] text-slate-400 mt-2 px-1">
                             Get your API key from <a href="https://platform.openai.com/api-keys" target="_blank" class="text-teal-500 hover:underline">OpenAI Platform</a>
                         </p>
-                        <button onclick="saveOpenaiApiKey()" class="w-full mt-3 py-2.5 bg-teal-600 hover:bg-teal-700 text-white rounded-xl font-bold text-xs shadow-lg shadow-teal-200 active:scale-95 transition-all flex items-center justify-center gap-2">
+                        <button id="saveOpenaiBtn" onclick="saveOpenaiApiKey(this)" class="w-full mt-3 py-2.5 bg-teal-600 hover:bg-teal-700 text-white rounded-xl font-bold text-xs shadow-lg shadow-teal-200 active:scale-95 transition-all flex items-center justify-center gap-2">
                             ${Icons.Save} Save API Key
                         </button>
                     </div>
@@ -342,7 +422,7 @@ function renderSettingsModal() {
                             </p>
                         </div>
 
-                        <button onclick="saveClaudeSettings()" class="w-full mt-3 py-2.5 bg-orange-600 hover:bg-orange-700 text-white rounded-xl font-bold text-xs shadow-lg shadow-orange-200 active:scale-95 transition-all flex items-center justify-center gap-2">
+                        <button id="saveClaudeBtn" onclick="saveClaudeSettings(this)" class="w-full mt-3 py-2.5 bg-orange-600 hover:bg-orange-700 text-white rounded-xl font-bold text-xs shadow-lg shadow-orange-200 active:scale-95 transition-all flex items-center justify-center gap-2">
                             ${Icons.Save} Save Claude Settings
                         </button>
                     </div>
@@ -365,7 +445,7 @@ function renderSettingsModal() {
                         <p class="text-[10px] text-slate-400 mt-2 px-1">
                             Get your API key from <a href="https://platform.deepseek.com/api_keys" target="_blank" class="text-blue-500 hover:underline">DeepSeek Platform</a>
                         </p>
-                        <button onclick="saveDeepseekApiKey()" class="w-full mt-3 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold text-xs shadow-lg shadow-blue-200 active:scale-95 transition-all flex items-center justify-center gap-2">
+                        <button id="saveDeepseekBtn" onclick="saveDeepseekApiKey(this)" class="w-full mt-3 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold text-xs shadow-lg shadow-blue-200 active:scale-95 transition-all flex items-center justify-center gap-2">
                             ${Icons.Save} Save API Key
                         </button>
                     </div>
@@ -383,7 +463,7 @@ function renderSettingsModal() {
                             <input type="text" id="localUrlInput" class="flex-grow bg-transparent border-none text-xs focus:ring-0 p-0 ml-2 text-slate-700 outline-none" value="${escapeHtml(AppState.localBaseUrl)}" placeholder="http://localhost:1234">
                         </div>
                         <p class="text-[10px] text-slate-400 mt-2 px-1">Ensure your local server (e.g., LM Studio) is running and CORS is enabled.</p>
-                        <button onclick="handleConnectLocalClick()" ${AppState.isConnectingLocal ? 'disabled' : ''} class="w-full mt-3 py-2.5 bg-purple-600 hover:bg-purple-700 text-white rounded-xl font-bold text-xs shadow-lg shadow-purple-200 active:scale-95 transition-all flex items-center justify-center gap-2 disabled:opacity-50">
+                        <button id="connectLocalBtn" onclick="handleConnectLocalClick(this)" ${AppState.isConnectingLocal ? 'disabled' : ''} class="w-full mt-3 py-2.5 bg-purple-600 hover:bg-purple-700 text-white rounded-xl font-bold text-xs shadow-lg shadow-purple-200 active:scale-95 transition-all flex items-center justify-center gap-2 disabled:opacity-50">
                             ${AppState.isConnectingLocal ? Icons.Loader2 : Icons.Plug}
                             ${AppState.isConnectingLocal ? 'Connecting...' : 'Connect & Fetch Models'}
                         </button>
@@ -753,7 +833,7 @@ function renderSourcePanel() {
                 </h3>
                 <div class="flex items-center gap-3">
                     ${AppState.translationPairs.length > 0 ? `
-                        <button onclick="copySourceText()" class="p-2 text-slate-400 hover:text-indigo-600 transition-colors" title="Copy Source Text">
+                        <button id="copySourceBtn" onclick="copySourceText(this)" class="p-2 text-slate-400 hover:text-indigo-600 transition-colors" title="Copy Source Text">
                             ${Icons.Copy}
                         </button>
                         <div class="flex items-center bg-slate-100 rounded-xl p-0.5 border border-slate-200">
@@ -797,7 +877,7 @@ function renderTargetPanel() {
         <section class="bg-white rounded-[2rem] border border-slate-200 shadow-sm flex flex-col overflow-hidden relative group">
             <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
                 <h3 class="text-xs font-black text-slate-400 uppercase tracking-[0.2em]">Target Panel</h3>
-                <button onclick="copyTargetText()" class="p-2 text-slate-400 hover:text-indigo-600 transition-colors">${Icons.Copy}</button>
+                <button id="copyTargetBtn" onclick="copyTargetText(this)" class="p-2 text-slate-400 hover:text-indigo-600 transition-colors">${Icons.Copy}</button>
             </div>
             <div class="flex-grow p-4 overflow-y-auto custom-scrollbar bg-slate-50/20" onclick="handleBlankAreaClick(event)">
                 ${AppState.isLoading && AppState.translationPairs.length === 0 ? `
@@ -1111,19 +1191,19 @@ function autoResizeTextarea(textarea) {
 }
 
 // ============= 辅助UI函数 =============
-function copySourceText() {
+function copySourceText(buttonElement) {
     const text = AppState.translationPairs.map(p => p.src).join('\n');
     copyToClipboard(text);
-    showToast('Source text copied to clipboard', 'success');
+    showButtonFeedback(buttonElement);
 }
 
-function copyTargetText() {
+function copyTargetText(buttonElement) {
     const text = AppState.translationPairs.map(p => p.tgt).join('\n');
     copyToClipboard(text);
-    showToast('Target text copied to clipboard', 'success');
+    showButtonFeedback(buttonElement);
 }
 
-function saveGeminiApiKey() {
+function saveGeminiApiKey(buttonElement) {
     const input = document.getElementById('geminiApiKeyInput');
     if (input) {
         AppState.geminiApiKey = input.value.trim();
@@ -1131,7 +1211,7 @@ function saveGeminiApiKey() {
         try {
             localStorage.setItem('geminiApiKey', AppState.geminiApiKey);
         } catch (e) {}
-        showToast('Gemini API Key saved successfully', 'success');
+        showSaveButtonFeedback(buttonElement);
     }
 }
 
@@ -1142,7 +1222,7 @@ function toggleApiKeyVisibility(inputId) {
     }
 }
 
-function saveOpenaiApiKey() {
+function saveOpenaiApiKey(buttonElement) {
     const input = document.getElementById('openaiApiKeyInput');
     if (input) {
         AppState.openaiApiKey = input.value.trim();
@@ -1150,11 +1230,11 @@ function saveOpenaiApiKey() {
         try {
             localStorage.setItem('openaiApiKey', AppState.openaiApiKey);
         } catch (e) {}
-        showToast('OpenAI API Key saved successfully', 'success');
+        showSaveButtonFeedback(buttonElement);
     }
 }
 
-function saveClaudeSettings() {
+function saveClaudeSettings(buttonElement) {
     const apiKeyInput = document.getElementById('claudeApiKeyInput');
     const proxyUrlInput = document.getElementById('claudeProxyUrlInput');
 
@@ -1171,10 +1251,10 @@ function saveClaudeSettings() {
         localStorage.setItem('claudeProxyUrl', AppState.claudeProxyUrl);
     } catch (e) {}
 
-    showToast('Claude settings saved successfully', 'success');
+    showSaveButtonFeedback(buttonElement);
 }
 
-function saveDeepseekApiKey() {
+function saveDeepseekApiKey(buttonElement) {
     const input = document.getElementById('deepseekApiKeyInput');
     if (input) {
         AppState.deepseekApiKey = input.value.trim();
@@ -1182,7 +1262,7 @@ function saveDeepseekApiKey() {
         try {
             localStorage.setItem('deepseekApiKey', AppState.deepseekApiKey);
         } catch (e) {}
-        showToast('DeepSeek API Key saved successfully', 'success');
+        showSaveButtonFeedback(buttonElement);
     }
 }
 
@@ -1280,7 +1360,7 @@ function toggleModelVisibility(modelId) {
     renderApp();
 }
 
-function handleConnectLocalClick() {
+function handleConnectLocalClick(buttonElement) {
     const input = document.getElementById('localUrlInput');
     if (input) {
         AppState.localBaseUrl = input.value;
@@ -1289,6 +1369,8 @@ function handleConnectLocalClick() {
             localStorage.setItem('localBaseUrl', AppState.localBaseUrl);
         } catch (e) {}
     }
+    // 保存按钮引用以便在连接成功后显示反馈
+    AppState._connectButtonElement = buttonElement;
     handleConnectLocal();
 }
 

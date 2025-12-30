@@ -403,7 +403,11 @@ async function handleConnectLocal() {
             localStorage.setItem('localBaseUrl', AppState.localBaseUrl);
         } catch (e) {}
 
-        showToast(`Connected to local server (${models.length} models found)`, 'success');
+        // 显示按钮反馈动画
+        if (AppState._connectButtonElement) {
+            showConnectButtonFeedback(AppState._connectButtonElement, models.length);
+            AppState._connectButtonElement = null;
+        }
         setState({ showLocalSettings: false });
     } catch (e) {
         setState({ error: e.message });
