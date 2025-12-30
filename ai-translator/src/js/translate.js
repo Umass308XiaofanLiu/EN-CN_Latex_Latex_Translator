@@ -48,7 +48,7 @@ async function handleTranslate() {
 
     try {
         const config = getApiConfig();
-        const result = await translateBulk(AppState.inputText, srcLang, tgtLang, config, controller.signal);
+        const result = await translateBulk(AppState.inputText, srcLang, tgtLang, config, controller.signal, AppState.isAutoSegment);
 
         if (result?.translations) {
             const pairs = result.translations.map(t => ({
@@ -402,7 +402,8 @@ async function handleConnectLocal() {
             localStorage.setItem('selectedModel', selectedModelId);
             localStorage.setItem('localBaseUrl', AppState.localBaseUrl);
         } catch (e) {}
-        
+
+        showToast(`Connected to local server (${models.length} models found)`, 'success');
         setState({ showLocalSettings: false });
     } catch (e) {
         setState({ error: e.message });
@@ -676,7 +677,7 @@ async function handleRegenerateAll() {
         const originalText = AppState.originalInputText || AppState.inputText;
 
         // 重新翻译所有内容
-        const result = await translateBulk(originalText, AppState.sourceLang, AppState.targetLang, config, controller.signal);
+        const result = await translateBulk(originalText, AppState.sourceLang, AppState.targetLang, config, controller.signal, AppState.isAutoSegment);
 
         if (result?.translations) {
             // 重新生成时，每个翻译对重置历史记录（不累加每句的历史）

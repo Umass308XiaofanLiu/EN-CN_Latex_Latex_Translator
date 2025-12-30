@@ -13,6 +13,7 @@ const AppState = {
     // 功能开关
     isAutoDetect: true,
     isAutoTranslate: true,
+    isAutoSegment: true,  // 自动分段开关：true=逐句分段显示，false=整体翻译
     isLoading: false,
     isEditingMode: true,
     viewMode: 'edit',  // 'edit' | 'preview' | 'original'

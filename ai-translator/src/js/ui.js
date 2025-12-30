@@ -201,6 +201,28 @@ function renderSettingsModal() {
                     <button onclick="closeSettings()" class="text-slate-400 hover:text-slate-600">${Icons.X}</button>
                 </div>
                 <div class="p-6 space-y-6">
+                    <!-- Translation Settings Section -->
+                    <div class="pb-5 border-b border-slate-100">
+                        <div class="flex items-center gap-2 mb-4">
+                            <div class="w-6 h-6 bg-gradient-to-br from-cyan-500 to-blue-600 rounded-lg flex items-center justify-center text-white">
+                                ${Icons.Settings2}
+                            </div>
+                            <span class="text-xs font-bold text-slate-600 uppercase tracking-wide">Translation Settings</span>
+                        </div>
+                        <div class="space-y-3">
+                            <label class="flex items-center justify-between p-3 rounded-xl hover:bg-slate-50 cursor-pointer transition-all ${AppState.isAutoSegment ? 'bg-cyan-50' : 'bg-slate-50'}">
+                                <div class="flex-1">
+                                    <div class="text-xs font-bold text-slate-700">Auto Segmentation</div>
+                                    <div class="text-[10px] text-slate-400 mt-0.5">${AppState.isAutoSegment ? 'Split into sentences for side-by-side comparison' : 'Translate as a whole, preserving original layout'}</div>
+                                </div>
+                                <div class="relative">
+                                    <input type="checkbox" ${AppState.isAutoSegment ? 'checked' : ''} onchange="toggleAutoSegment()" class="sr-only peer">
+                                    <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-cyan-100 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-cyan-500"></div>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+
                     <!-- Online Model Visibility Section -->
                     <div class="pb-5 border-b border-slate-100">
                         <div class="flex items-center gap-2 mb-4">
@@ -1092,11 +1114,13 @@ function autoResizeTextarea(textarea) {
 function copySourceText() {
     const text = AppState.translationPairs.map(p => p.src).join('\n');
     copyToClipboard(text);
+    showToast('Source text copied to clipboard', 'success');
 }
 
 function copyTargetText() {
     const text = AppState.translationPairs.map(p => p.tgt).join('\n');
     copyToClipboard(text);
+    showToast('Target text copied to clipboard', 'success');
 }
 
 function saveGeminiApiKey() {
@@ -1107,7 +1131,7 @@ function saveGeminiApiKey() {
         try {
             localStorage.setItem('geminiApiKey', AppState.geminiApiKey);
         } catch (e) {}
-        setState({ showLocalSettings: false });
+        showToast('Gemini API Key saved successfully', 'success');
     }
 }
 
@@ -1126,7 +1150,7 @@ function saveOpenaiApiKey() {
         try {
             localStorage.setItem('openaiApiKey', AppState.openaiApiKey);
         } catch (e) {}
-        setState({ showLocalSettings: false });
+        showToast('OpenAI API Key saved successfully', 'success');
     }
 }
 
@@ -1147,7 +1171,7 @@ function saveClaudeSettings() {
         localStorage.setItem('claudeProxyUrl', AppState.claudeProxyUrl);
     } catch (e) {}
 
-    setState({ showSettings: false });
+    showToast('Claude settings saved successfully', 'success');
 }
 
 function saveDeepseekApiKey() {
@@ -1158,7 +1182,7 @@ function saveDeepseekApiKey() {
         try {
             localStorage.setItem('deepseekApiKey', AppState.deepseekApiKey);
         } catch (e) {}
-        setState({ showSettings: false });
+        showToast('DeepSeek API Key saved successfully', 'success');
     }
 }
 
@@ -1190,6 +1214,15 @@ function toggleAutoTranslate() {
 
 function toggleAutoDetect() {
     AppState.isAutoDetect = !AppState.isAutoDetect;
+    renderApp();
+}
+
+function toggleAutoSegment() {
+    AppState.isAutoSegment = !AppState.isAutoSegment;
+    // 保存到 localStorage
+    try {
+        localStorage.setItem('isAutoSegment', AppState.isAutoSegment.toString());
+    } catch (e) {}
     renderApp();
 }
 
@@ -1458,6 +1491,12 @@ function loadSavedSettings() {
                 const parsed = JSON.parse(savedModelVisibility);
                 AppState.modelVisibility = { ...AppState.modelVisibility, ...parsed };
             } catch (e) {}
+        }
+
+        // 加载自动分段设置
+        const savedAutoSegment = localStorage.getItem('isAutoSegment');
+        if (savedAutoSegment !== null) {
+            AppState.isAutoSegment = savedAutoSegment === 'true';
         }
 
         // 只要有保存的本地地址，就自动尝试连接（获取模型列表）
