@@ -186,12 +186,14 @@ function adjustAllPopups() {
 // ============= 主渲染函数 =============
 function renderApp(preserveScroll = true) {
     // 保存滚动位置
-    let savedSourceScroll = 0, savedTargetScroll = 0;
+    let savedSourceScroll = 0, savedTargetScroll = 0, savedSettingsScroll = 0;
     if (preserveScroll) {
         const sourceContainer = document.querySelector('section:first-of-type .overflow-y-auto');
         const targetContainer = document.querySelector('section:last-of-type .overflow-y-auto');
+        const settingsModal = document.getElementById('settingsModalContent');
         savedSourceScroll = sourceContainer ? sourceContainer.scrollTop : 0;
         savedTargetScroll = targetContainer ? targetContainer.scrollTop : 0;
+        savedSettingsScroll = settingsModal ? settingsModal.scrollTop : 0;
     }
 
     const root = document.getElementById('root');
@@ -216,8 +218,10 @@ function renderApp(preserveScroll = true) {
     if (preserveScroll) {
         const newSourceContainer = document.querySelector('section:first-of-type .overflow-y-auto');
         const newTargetContainer = document.querySelector('section:last-of-type .overflow-y-auto');
+        const newSettingsModal = document.getElementById('settingsModalContent');
         if (newSourceContainer) newSourceContainer.scrollTop = savedSourceScroll;
         if (newTargetContainer) newTargetContainer.scrollTop = savedTargetScroll;
+        if (newSettingsModal) newSettingsModal.scrollTop = savedSettingsScroll;
     }
 
     // 渲染后调整弹窗位置
@@ -273,7 +277,7 @@ function renderSettingsModal() {
 
     return `
         <div class="fixed inset-0 z-[100] bg-black/20 backdrop-blur-sm flex items-center justify-center p-4">
-            <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-lg overflow-hidden max-h-[90vh] overflow-y-auto">
+            <div id="settingsModalContent" class="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-lg overflow-hidden max-h-[90vh] overflow-y-auto">
                 <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50 sticky top-0 z-10">
                     <h3 class="text-sm font-bold text-slate-700 flex items-center gap-2">
                         ${Icons.SettingsGear} Settings
@@ -463,7 +467,7 @@ function renderSettingsModal() {
                             <input type="text" id="localUrlInput" class="flex-grow bg-transparent border-none text-xs focus:ring-0 p-0 ml-2 text-slate-700 outline-none" value="${escapeHtml(AppState.localBaseUrl)}" placeholder="http://localhost:1234">
                         </div>
                         <p class="text-[10px] text-slate-400 mt-2 px-1">Ensure your local server (e.g., LM Studio) is running and CORS is enabled.</p>
-                        <button id="connectLocalBtn" onclick="handleConnectLocalClick(this)" ${AppState.isConnectingLocal ? 'disabled' : ''} class="w-full mt-3 py-2.5 bg-purple-600 hover:bg-purple-700 text-white rounded-xl font-bold text-xs shadow-lg shadow-purple-200 active:scale-95 transition-all flex items-center justify-center gap-2 disabled:opacity-50">
+                        <button id="connectLocalBtn" onclick="handleConnectLocalClick()" ${AppState.isConnectingLocal ? 'disabled' : ''} class="w-full mt-3 py-2.5 bg-purple-600 hover:bg-purple-700 text-white rounded-xl font-bold text-xs shadow-lg shadow-purple-200 active:scale-95 transition-all flex items-center justify-center gap-2 disabled:opacity-50">
                             ${AppState.isConnectingLocal ? Icons.Loader2 : Icons.Plug}
                             ${AppState.isConnectingLocal ? 'Connecting...' : 'Connect & Fetch Models'}
                         </button>
@@ -1360,7 +1364,7 @@ function toggleModelVisibility(modelId) {
     renderApp();
 }
 
-function handleConnectLocalClick(buttonElement) {
+function handleConnectLocalClick() {
     const input = document.getElementById('localUrlInput');
     if (input) {
         AppState.localBaseUrl = input.value;
@@ -1369,8 +1373,6 @@ function handleConnectLocalClick(buttonElement) {
             localStorage.setItem('localBaseUrl', AppState.localBaseUrl);
         } catch (e) {}
     }
-    // 保存按钮引用以便在连接成功后显示反馈
-    AppState._connectButtonElement = buttonElement;
     handleConnectLocal();
 }
 
