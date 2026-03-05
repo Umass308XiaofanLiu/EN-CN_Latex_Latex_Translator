@@ -263,6 +263,7 @@ function renderSettingsModal() {
 
     const onlineModels = [
         { id: 'gemini-2.5-flash-lite', name: 'Gemini 2.5 Flash Lite', provider: 'gemini', iconClass: 'text-emerald-500' },
+        { id: 'gemini-3.1-flash-lite-preview', name: 'Gemini 3.1 Flash Lite', provider: 'gemini', iconClass: 'text-purple-500' },
         { id: 'gemini-3-flash-preview', name: 'Gemini 3 Flash', provider: 'gemini', iconClass: 'text-orange-500' },
         { id: 'gemini-3-pro-preview', name: 'Gemini 3 Pro', provider: 'gemini', iconClass: 'text-indigo-600' },
         { id: 'gpt-5-nano', name: 'GPT-5 Nano', provider: 'openai', iconClass: 'text-teal-500' },
@@ -637,6 +638,7 @@ function renderHistoryMenu() {
 function renderModelSelector() {
     const allGeminiModels = [
         { id: 'gemini-2.5-flash-lite', name: 'Gemini 2.5 Flash Lite', sub: 'Fast & Cheap', iconClass: 'text-emerald-500', icon: Icons.Rocket },
+        { id: 'gemini-3.1-flash-lite-preview', name: 'Gemini 3.1 Flash Lite', sub: 'Fastest & Most Cost-Effective', iconClass: 'text-purple-500', icon: Icons.Rocket },
         { id: 'gemini-3-flash-preview', name: 'Gemini 3 Flash', sub: 'Speed + Intelligence', iconClass: 'text-orange-500', icon: Icons.Zap },
         { id: 'gemini-3-pro-preview', name: 'Gemini 3 Pro', sub: 'Best Quality', iconClass: 'text-indigo-600', icon: Icons.Cpu }
     ];
@@ -690,6 +692,10 @@ function renderModelSelector() {
         currentIcon = Icons.Rocket;
         currentIconClass = 'text-emerald-500';
         currentLabel = '2.5 Lite';
+    } else if (AppState.selectedModel === 'gemini-3.1-flash-lite-preview') {
+        currentIcon = Icons.Rocket;
+        currentIconClass = 'text-purple-500';
+        currentLabel = '3.1 Lite';
     } else if (AppState.selectedModel === 'gemini-3-flash-preview') {
         currentIcon = Icons.Zap;
         currentIconClass = 'text-orange-500';
@@ -1080,6 +1086,9 @@ function renderFooter() {
     } else if (AppState.selectedModel === 'gemini-flash-lite-latest') {
         statusText = 'ULTRA FAST LITE MODE';
         statusDotClass = 'bg-emerald-500 shadow-emerald-200';
+    } else if (AppState.selectedModel === 'gemini-3.1-flash-lite-preview') {
+        statusText = 'ULTRA FAST LITE MODE';
+        statusDotClass = 'bg-purple-500 shadow-purple-200';
     } else if (AppState.selectedModel === 'gemini-3-flash-preview') {
         statusText = 'FAST MODE ENABLED';
         statusDotClass = 'bg-emerald-500 shadow-emerald-200';

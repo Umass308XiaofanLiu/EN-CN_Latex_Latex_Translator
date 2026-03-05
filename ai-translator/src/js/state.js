@@ -74,6 +74,7 @@ const AppState = {
     // 模型可见性设置
     modelVisibility: {
         'gemini-2.5-flash-lite': true,
+        'gemini-3.1-flash-lite-preview': true,
         'gemini-3-flash-preview': true,
         'gemini-3-pro-preview': true,
         'gpt-5-nano': true,
