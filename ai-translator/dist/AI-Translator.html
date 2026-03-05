@@ -118,11 +118,13 @@ const AppState = {
     // 模型可见性设置
     modelVisibility: {
         'gemini-2.5-flash-lite': true,
+        'gemini-3.1-flash-lite-preview': true,
         'gemini-3-flash-preview': true,
         'gemini-3-pro-preview': true,
         'gpt-5-nano': true,
         'gpt-5-mini': true,
         'gpt-5.2': true,
+        'gpt-5.3-codex-spark': true,
         'claude-haiku-4-5-20251001': true,
         'claude-sonnet-4-5-20250929': true,
         'claude-opus-4-5-20251101': true,
@@ -2176,11 +2178,13 @@ function renderSettingsModal() {
 
     const onlineModels = [
         { id: 'gemini-2.5-flash-lite', name: 'Gemini 2.5 Flash Lite', provider: 'gemini', iconClass: 'text-emerald-500' },
+        { id: 'gemini-3.1-flash-lite-preview', name: 'Gemini 3.1 Flash Lite', provider: 'gemini', iconClass: 'text-purple-500' },
         { id: 'gemini-3-flash-preview', name: 'Gemini 3 Flash', provider: 'gemini', iconClass: 'text-orange-500' },
         { id: 'gemini-3-pro-preview', name: 'Gemini 3 Pro', provider: 'gemini', iconClass: 'text-indigo-600' },
         { id: 'gpt-5-nano', name: 'GPT-5 Nano', provider: 'openai', iconClass: 'text-teal-500' },
         { id: 'gpt-5-mini', name: 'GPT-5 Mini', provider: 'openai', iconClass: 'text-green-500' },
         { id: 'gpt-5.2', name: 'GPT-5.2', provider: 'openai', iconClass: 'text-sky-600' },
+        { id: 'gpt-5.3-codex-spark', name: 'GPT-5.3 Codex Spark', provider: 'openai', iconClass: 'text-yellow-500' },
         { id: 'claude-haiku-4-5-20251001', name: 'Claude Haiku 4.5', provider: 'claude', iconClass: 'text-amber-500' },
         { id: 'claude-sonnet-4-5-20250929', name: 'Claude Sonnet 4.5', provider: 'claude', iconClass: 'text-orange-600' },
         { id: 'claude-opus-4-5-20251101', name: 'Claude Opus 4.5', provider: 'claude', iconClass: 'text-rose-600' },
@@ -2550,6 +2554,7 @@ function renderHistoryMenu() {
 function renderModelSelector() {
     const allGeminiModels = [
         { id: 'gemini-2.5-flash-lite', name: 'Gemini 2.5 Flash Lite', sub: 'Fast & Cheap', iconClass: 'text-emerald-500', icon: Icons.Rocket },
+        { id: 'gemini-3.1-flash-lite-preview', name: 'Gemini 3.1 Flash Lite', sub: 'Fastest & Most Cost-Effective', iconClass: 'text-purple-500', icon: Icons.Rocket },
         { id: 'gemini-3-flash-preview', name: 'Gemini 3 Flash', sub: 'Speed + Intelligence', iconClass: 'text-orange-500', icon: Icons.Zap },
         { id: 'gemini-3-pro-preview', name: 'Gemini 3 Pro', sub: 'Best Quality', iconClass: 'text-indigo-600', icon: Icons.Cpu }
     ];
@@ -2557,7 +2562,8 @@ function renderModelSelector() {
     const allOpenaiModels = [
         { id: 'gpt-5-nano', name: 'GPT-5 Nano', sub: 'Ultra Fast & Light', iconClass: 'text-teal-500', icon: Icons.Rocket },
         { id: 'gpt-5-mini', name: 'GPT-5 Mini', sub: 'Fast & Balanced', iconClass: 'text-green-500', icon: Icons.Zap },
-        { id: 'gpt-5.2', name: 'GPT-5.2', sub: 'Best Quality', iconClass: 'text-sky-600', icon: Icons.Cpu }
+        { id: 'gpt-5.2', name: 'GPT-5.2', sub: 'Best Quality', iconClass: 'text-sky-600', icon: Icons.Cpu },
+        { id: 'gpt-5.3-codex-spark', name: 'GPT-5.3 Codex Spark', sub: 'Real-Time Coding (1000 tok/s)', iconClass: 'text-yellow-500', icon: Icons.Zap }
     ];
 
     const allClaudeModels = [
@@ -2587,7 +2593,8 @@ function renderModelSelector() {
         currentIcon = openaiModel?.icon || Icons.Cpu;
         currentIconClass = openaiModel?.iconClass || 'text-sky-600';
         currentLabel = AppState.selectedModel === 'gpt-5-nano' ? 'GPT-5 Nano' :
-                       AppState.selectedModel === 'gpt-5-mini' ? 'GPT-5 Mini' : 'GPT-5.2';
+                       AppState.selectedModel === 'gpt-5-mini' ? 'GPT-5 Mini' :
+                       AppState.selectedModel === 'gpt-5.3-codex-spark' ? 'Codex Spark' : 'GPT-5.2';
     } else if (AppState.apiProvider === 'claude') {
         const claudeModel = allClaudeModels.find(m => m.id === AppState.selectedModel);
         currentIcon = claudeModel?.icon || Icons.Cpu;
@@ -2603,6 +2610,10 @@ function renderModelSelector() {
         currentIcon = Icons.Rocket;
         currentIconClass = 'text-emerald-500';
         currentLabel = '2.5 Lite';
+    } else if (AppState.selectedModel === 'gemini-3.1-flash-lite-preview') {
+        currentIcon = Icons.Rocket;
+        currentIconClass = 'text-purple-500';
+        currentLabel = '3.1 Lite';
     } else if (AppState.selectedModel === 'gemini-3-flash-preview') {
         currentIcon = Icons.Zap;
         currentIconClass = 'text-orange-500';
@@ -2993,6 +3004,9 @@ function renderFooter() {
     } else if (AppState.selectedModel === 'gemini-flash-lite-latest') {
         statusText = 'ULTRA FAST LITE MODE';
         statusDotClass = 'bg-emerald-500 shadow-emerald-200';
+    } else if (AppState.selectedModel === 'gemini-3.1-flash-lite-preview') {
+        statusText = 'ULTRA FAST LITE MODE';
+        statusDotClass = 'bg-purple-500 shadow-purple-200';
     } else if (AppState.selectedModel === 'gemini-3-flash-preview') {
         statusText = 'FAST MODE ENABLED';
         statusDotClass = 'bg-emerald-500 shadow-emerald-200';

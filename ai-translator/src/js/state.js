@@ -74,11 +74,13 @@ const AppState = {
     // 模型可见性设置
     modelVisibility: {
         'gemini-2.5-flash-lite': true,
+        'gemini-3.1-flash-lite-preview': true,
         'gemini-3-flash-preview': true,
         'gemini-3-pro-preview': true,
         'gpt-5-nano': true,
         'gpt-5-mini': true,
         'gpt-5.2': true,
+        'gpt-5.3-codex-spark': true,
         'claude-haiku-4-5-20251001': true,
         'claude-sonnet-4-5-20250929': true,
         'claude-opus-4-5-20251101': true,
