@@ -124,6 +124,7 @@ const AppState = {
         'gpt-5-nano': true,
         'gpt-5-mini': true,
         'gpt-5.2': true,
+        'gpt-5.3-codex-spark': true,
         'claude-haiku-4-5-20251001': true,
         'claude-sonnet-4-5-20250929': true,
         'claude-opus-4-5-20251101': true,
@@ -2183,6 +2184,7 @@ function renderSettingsModal() {
         { id: 'gpt-5-nano', name: 'GPT-5 Nano', provider: 'openai', iconClass: 'text-teal-500' },
         { id: 'gpt-5-mini', name: 'GPT-5 Mini', provider: 'openai', iconClass: 'text-green-500' },
         { id: 'gpt-5.2', name: 'GPT-5.2', provider: 'openai', iconClass: 'text-sky-600' },
+        { id: 'gpt-5.3-codex-spark', name: 'GPT-5.3 Codex Spark', provider: 'openai', iconClass: 'text-yellow-500' },
         { id: 'claude-haiku-4-5-20251001', name: 'Claude Haiku 4.5', provider: 'claude', iconClass: 'text-amber-500' },
         { id: 'claude-sonnet-4-5-20250929', name: 'Claude Sonnet 4.5', provider: 'claude', iconClass: 'text-orange-600' },
         { id: 'claude-opus-4-5-20251101', name: 'Claude Opus 4.5', provider: 'claude', iconClass: 'text-rose-600' },
@@ -2560,7 +2562,8 @@ function renderModelSelector() {
     const allOpenaiModels = [
         { id: 'gpt-5-nano', name: 'GPT-5 Nano', sub: 'Ultra Fast & Light', iconClass: 'text-teal-500', icon: Icons.Rocket },
         { id: 'gpt-5-mini', name: 'GPT-5 Mini', sub: 'Fast & Balanced', iconClass: 'text-green-500', icon: Icons.Zap },
-        { id: 'gpt-5.2', name: 'GPT-5.2', sub: 'Best Quality', iconClass: 'text-sky-600', icon: Icons.Cpu }
+        { id: 'gpt-5.2', name: 'GPT-5.2', sub: 'Best Quality', iconClass: 'text-sky-600', icon: Icons.Cpu },
+        { id: 'gpt-5.3-codex-spark', name: 'GPT-5.3 Codex Spark', sub: 'Real-Time Coding (1000 tok/s)', iconClass: 'text-yellow-500', icon: Icons.Zap }
     ];
 
     const allClaudeModels = [
@@ -2590,7 +2593,8 @@ function renderModelSelector() {
         currentIcon = openaiModel?.icon || Icons.Cpu;
         currentIconClass = openaiModel?.iconClass || 'text-sky-600';
         currentLabel = AppState.selectedModel === 'gpt-5-nano' ? 'GPT-5 Nano' :
-                       AppState.selectedModel === 'gpt-5-mini' ? 'GPT-5 Mini' : 'GPT-5.2';
+                       AppState.selectedModel === 'gpt-5-mini' ? 'GPT-5 Mini' :
+                       AppState.selectedModel === 'gpt-5.3-codex-spark' ? 'Codex Spark' : 'GPT-5.2';
     } else if (AppState.apiProvider === 'claude') {
         const claudeModel = allClaudeModels.find(m => m.id === AppState.selectedModel);
         currentIcon = claudeModel?.icon || Icons.Cpu;
